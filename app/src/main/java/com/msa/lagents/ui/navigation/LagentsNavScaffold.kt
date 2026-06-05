@@ -47,6 +47,14 @@ fun LagentsNavScaffold(
     settings: AppSettings,
     onCycleTheme: () -> Unit,
     onDynamicColorChanged: (Boolean) -> Unit,
+    onLocalOnlyModeChanged: (Boolean) -> Unit,
+    onSensitiveTextRedactionChanged: (Boolean) -> Unit,
+    onRequireApprovalForSideEffectsChanged: (Boolean) -> Unit,
+    onCycleRoutingPreference: () -> Unit,
+    onBudgetWarningsChanged: (Boolean) -> Unit,
+    onCycleVoiceInputMode: () -> Unit,
+    onAutoReadAssistantResponsesChanged: (Boolean) -> Unit,
+    onCycleTranscriptRetention: () -> Unit,
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -84,6 +92,14 @@ fun LagentsNavScaffold(
                             navController = navController,
                             settings = settings,
                             onDynamicColorChanged = onDynamicColorChanged,
+                            onLocalOnlyModeChanged = onLocalOnlyModeChanged,
+                            onSensitiveTextRedactionChanged = onSensitiveTextRedactionChanged,
+                            onRequireApprovalForSideEffectsChanged = onRequireApprovalForSideEffectsChanged,
+                            onCycleRoutingPreference = onCycleRoutingPreference,
+                            onBudgetWarningsChanged = onBudgetWarningsChanged,
+                            onCycleVoiceInputMode = onCycleVoiceInputMode,
+                            onAutoReadAssistantResponsesChanged = onAutoReadAssistantResponsesChanged,
+                            onCycleTranscriptRetention = onCycleTranscriptRetention,
                         )
                     }
                 }
@@ -110,6 +126,14 @@ fun LagentsNavScaffold(
                         navController = navController,
                         settings = settings,
                         onDynamicColorChanged = onDynamicColorChanged,
+                        onLocalOnlyModeChanged = onLocalOnlyModeChanged,
+                        onSensitiveTextRedactionChanged = onSensitiveTextRedactionChanged,
+                        onRequireApprovalForSideEffectsChanged = onRequireApprovalForSideEffectsChanged,
+                        onCycleRoutingPreference = onCycleRoutingPreference,
+                        onBudgetWarningsChanged = onBudgetWarningsChanged,
+                        onCycleVoiceInputMode = onCycleVoiceInputMode,
+                        onAutoReadAssistantResponsesChanged = onAutoReadAssistantResponsesChanged,
+                        onCycleTranscriptRetention = onCycleTranscriptRetention,
                     )
                 }
             }
@@ -123,6 +147,14 @@ private fun LagentsNavHost(
     navController: NavHostController,
     settings: AppSettings,
     onDynamicColorChanged: (Boolean) -> Unit,
+    onLocalOnlyModeChanged: (Boolean) -> Unit,
+    onSensitiveTextRedactionChanged: (Boolean) -> Unit,
+    onRequireApprovalForSideEffectsChanged: (Boolean) -> Unit,
+    onCycleRoutingPreference: () -> Unit,
+    onBudgetWarningsChanged: (Boolean) -> Unit,
+    onCycleVoiceInputMode: () -> Unit,
+    onAutoReadAssistantResponsesChanged: (Boolean) -> Unit,
+    onCycleTranscriptRetention: () -> Unit,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         NavHost(
@@ -135,6 +167,14 @@ private fun LagentsNavHost(
                         destination = destination,
                         settings = settings,
                         onDynamicColorChanged = onDynamicColorChanged,
+                        onLocalOnlyModeChanged = onLocalOnlyModeChanged,
+                        onSensitiveTextRedactionChanged = onSensitiveTextRedactionChanged,
+                        onRequireApprovalForSideEffectsChanged = onRequireApprovalForSideEffectsChanged,
+                        onCycleRoutingPreference = onCycleRoutingPreference,
+                        onBudgetWarningsChanged = onBudgetWarningsChanged,
+                        onCycleVoiceInputMode = onCycleVoiceInputMode,
+                        onAutoReadAssistantResponsesChanged = onAutoReadAssistantResponsesChanged,
+                        onCycleTranscriptRetention = onCycleTranscriptRetention,
                     )
                 }
             }

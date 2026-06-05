@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.msa.lagents.data.settings.AppSettings
+import com.msa.lagents.data.settings.PrivacyMode
 import com.msa.lagents.ui.navigation.LagentsDestination
 
 @Composable
@@ -42,6 +43,14 @@ fun DestinationScreen(
     destination: LagentsDestination,
     settings: AppSettings,
     onDynamicColorChanged: (Boolean) -> Unit,
+    onLocalOnlyModeChanged: (Boolean) -> Unit,
+    onSensitiveTextRedactionChanged: (Boolean) -> Unit,
+    onRequireApprovalForSideEffectsChanged: (Boolean) -> Unit,
+    onCycleRoutingPreference: () -> Unit,
+    onBudgetWarningsChanged: (Boolean) -> Unit,
+    onCycleVoiceInputMode: () -> Unit,
+    onAutoReadAssistantResponsesChanged: (Boolean) -> Unit,
+    onCycleTranscriptRetention: () -> Unit,
 ) {
     when (destination) {
         LagentsDestination.Chat -> ChatFoundationScreen()
@@ -53,6 +62,14 @@ fun DestinationScreen(
         LagentsDestination.Settings -> SettingsFoundationScreen(
             settings = settings,
             onDynamicColorChanged = onDynamicColorChanged,
+            onLocalOnlyModeChanged = onLocalOnlyModeChanged,
+            onSensitiveTextRedactionChanged = onSensitiveTextRedactionChanged,
+            onRequireApprovalForSideEffectsChanged = onRequireApprovalForSideEffectsChanged,
+            onCycleRoutingPreference = onCycleRoutingPreference,
+            onBudgetWarningsChanged = onBudgetWarningsChanged,
+            onCycleVoiceInputMode = onCycleVoiceInputMode,
+            onAutoReadAssistantResponsesChanged = onAutoReadAssistantResponsesChanged,
+            onCycleTranscriptRetention = onCycleTranscriptRetention,
         )
     }
 }
@@ -197,6 +214,14 @@ private fun DebugFoundationScreen() {
 private fun SettingsFoundationScreen(
     settings: AppSettings,
     onDynamicColorChanged: (Boolean) -> Unit,
+    onLocalOnlyModeChanged: (Boolean) -> Unit,
+    onSensitiveTextRedactionChanged: (Boolean) -> Unit,
+    onRequireApprovalForSideEffectsChanged: (Boolean) -> Unit,
+    onCycleRoutingPreference: () -> Unit,
+    onBudgetWarningsChanged: (Boolean) -> Unit,
+    onCycleVoiceInputMode: () -> Unit,
+    onAutoReadAssistantResponsesChanged: (Boolean) -> Unit,
+    onCycleTranscriptRetention: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -215,6 +240,70 @@ private fun SettingsFoundationScreen(
                 body = "Use Android system colors when available. Explicit Lagents light and dark schemes remain the default.",
                 checked = settings.dynamicColorEnabled,
                 onCheckedChange = onDynamicColorChanged,
+            )
+        }
+        item {
+            SettingRow(
+                title = "Local-only mode",
+                body = "Block cloud calls, cloud fallback, and web tools when strict privacy is needed.",
+                checked = settings.privacyMode == PrivacyMode.LocalOnly,
+                onCheckedChange = onLocalOnlyModeChanged,
+            )
+        }
+        item {
+            SettingRow(
+                title = "Sensitive text redaction",
+                body = "Run a redaction pass before cloud calls where feasible and record the decision in debug traces.",
+                checked = settings.sensitiveTextRedactionEnabled,
+                onCheckedChange = onSensitiveTextRedactionChanged,
+            )
+        }
+        item {
+            SettingRow(
+                title = "Confirm side effects",
+                body = "Require explicit approval before tools perform external actions or modify app data.",
+                checked = settings.requireApprovalForSideEffects,
+                onCheckedChange = onRequireApprovalForSideEffectsChanged,
+            )
+        }
+        item {
+            ChoiceRow(
+                title = "Routing preference",
+                body = "Default model selection strategy for agents that do not override routing.",
+                value = settings.routingPreference.displayName,
+                onCycle = onCycleRoutingPreference,
+            )
+        }
+        item {
+            SettingRow(
+                title = "Budget warnings",
+                body = "Warn before expensive models, large contexts, or cloud fallback. Current monthly budget: ${settings.monthlyBudgetCents.toCurrencyLabel()}.",
+                checked = settings.budgetWarningsEnabled,
+                onCheckedChange = onBudgetWarningsChanged,
+            )
+        }
+        item {
+            ChoiceRow(
+                title = "Voice input",
+                body = "Default microphone behavior for chat composition.",
+                value = settings.voiceInputMode.displayName,
+                onCycle = onCycleVoiceInputMode,
+            )
+        }
+        item {
+            SettingRow(
+                title = "Auto-read responses",
+                body = "Read assistant messages aloud automatically when the active agent allows it.",
+                checked = settings.autoReadAssistantResponses,
+                onCheckedChange = onAutoReadAssistantResponsesChanged,
+            )
+        }
+        item {
+            ChoiceRow(
+                title = "Transcript retention",
+                body = "Controls whether speech transcript text is discarded or retained with conversations.",
+                value = settings.transcriptRetention.displayName,
+                onCycle = onCycleTranscriptRetention,
             )
         }
         items(
@@ -270,6 +359,49 @@ private fun FoundationScreen(
         item {
             OutlinedButton(onClick = {}) {
                 Text(text = "Implementation task list")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChoiceRow(
+    title: String,
+    body: String,
+    value: String,
+    onCycle: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = body,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            OutlinedButton(onClick = onCycle) {
+                Text(text = value)
             }
         }
     }
@@ -380,3 +512,8 @@ private data class FoundationItem(
     val body: String,
     val icon: ImageVector,
 )
+
+private val Enum<*>.displayName: String
+    get() = name.replace(Regex("([a-z])([A-Z])"), "$1 $2")
+
+private fun Int.toCurrencyLabel(): String = "$" + (this / 100)

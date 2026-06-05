@@ -27,9 +27,9 @@ Progress rule: update this file after each implementation milestone. When a task
 | Add manual `AppContainer` | Done | `LagentsApplication` exposes one explicit container for app-wide dependencies without Hilt. | `./gradlew :app:assembleDebug --no-daemon` passes |
 | Add app navigation shell | Done | App has Chat, Library, Workflows, Knowledge, Models, Debug, and Settings destinations. | `./gradlew :app:assembleDebug --no-daemon` passes |
 | Add adaptive navigation | Done | Phones use bottom navigation and wider layouts use rail/two-pane structure. | `./gradlew :app:assembleDebug --no-daemon` passes; screenshots still needed |
-| Add base UI components | In progress | Shared buttons, chips, cards, dialogs, empty states, loading states, and error states exist. | Foundation cards/chips/buttons build; dialogs and full state set still needed |
+| Add base UI components | Done | Shared buttons, chips, cards, dialogs, empty states, loading states, and error states exist. | `LagentsEmptyState`, `LagentsErrorState`, `LagentsLoadingState`, and `LagentsConfirmationDialog` build |
 | Add day/night theme system | Done | Light, dark, system, and optional dynamic color settings are wired through Compose. | `./gradlew :app:assembleDebug --no-daemon` passes |
-| Add DataStore settings foundation | In progress | Settings repository persists theme, privacy, routing, budget, and voice preferences. | Theme and dynamic color persist; privacy/routing/budget/voice settings still needed |
+| Add DataStore settings foundation | Done | Settings repository persists theme, privacy, routing, budget, and voice preferences. | `AppSettingsRepositoryTest` passes |
 | Add Room database foundation | Done | Database, DAOs, entities, and migration placeholder are created. | Room schema exported at `app/schemas/com.msa.lagents.data.local.LagentsDatabase/1.json`; build passes |
 
 ## Phase 2 - Core Domain Model
@@ -164,9 +164,9 @@ Progress rule: update this file after each implementation milestone. When a task
 
 ## Current Next Step
 
-Continue Phase 1 cleanup, then begin Phase 2:
+Continue with tests and Phase 2 domain modeling:
 
-1. Finish shared UI states: dialogs, empty states, loading states, and reusable error states.
-2. Extend DataStore settings for privacy, routing, budget, and voice preferences.
-3. Add unit tests for `AppContainer`, settings persistence, and Room DAOs.
-4. Start Phase 2 domain entities for agents, prompts, skills, tools, providers, memories, and debug traces.
+1. Add focused tests for `AppContainer` and Room DAOs.
+2. Start Phase 2 entities and repositories for agents, prompts, skills, tools, providers, memories, and debug traces.
+3. Add first Library CRUD screen backed by real repositories.
+4. Keep `./gradlew :app:assembleDebug --no-daemon` and `./gradlew :app:testDebugUnitTest --no-daemon` green after each slice.

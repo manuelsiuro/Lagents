@@ -24,6 +24,14 @@ fun LagentsApp(appContainer: AppContainer) {
             settings = settings,
             onCycleTheme = settingsViewModel::cycleThemePreference,
             onDynamicColorChanged = settingsViewModel::setDynamicColorEnabled,
+            onLocalOnlyModeChanged = settingsViewModel::toggleLocalOnlyMode,
+            onSensitiveTextRedactionChanged = settingsViewModel::setSensitiveTextRedactionEnabled,
+            onRequireApprovalForSideEffectsChanged = settingsViewModel::setRequireApprovalForSideEffects,
+            onCycleRoutingPreference = settingsViewModel::cycleRoutingPreference,
+            onBudgetWarningsChanged = settingsViewModel::setBudgetWarningsEnabled,
+            onCycleVoiceInputMode = settingsViewModel::cycleVoiceInputMode,
+            onAutoReadAssistantResponsesChanged = settingsViewModel::setAutoReadAssistantResponses,
+            onCycleTranscriptRetention = settingsViewModel::cycleTranscriptRetention,
         )
     }
 }
