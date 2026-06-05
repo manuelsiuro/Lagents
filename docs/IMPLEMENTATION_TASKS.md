@@ -62,10 +62,10 @@ Progress rule: update this file after each implementation milestone. When a task
 
 | Task | Status | Done when | Tests or checks |
 | --- | --- | --- | --- |
-| Build Agents CRUD UI | Not started | Users can create, view, edit, duplicate, archive, restore, and delete agents. | Compose UI tests |
-| Build Prompts CRUD UI | Not started | Users can manage prompt templates, variables, versions, preview, archive, restore, and duplicate. | Compose UI tests and prompt tests |
-| Build Skills CRUD UI | Not started | Users can manage prompt-plus-tools skills, inputs, output formats, permissions, and versions. | Compose UI tests and skill tests |
-| Build Tools CRUD/config UI | Not started | Users can configure built-in tools, permissions, metadata, enablement, and reset to defaults. | Compose UI tests and permission tests |
+| Build Agents CRUD UI | In progress | Users can create, view, edit, duplicate, archive, restore, and delete agents. | Repository-backed create/list exists; edit/archive/delete and UI tests still needed |
+| Build Prompts CRUD UI | In progress | Users can manage prompt templates, variables, versions, preview, archive, restore, and duplicate. | Repository-backed create/list exists; edit/archive/delete and tests still needed |
+| Build Skills CRUD UI | In progress | Users can manage prompt-plus-tools skills, inputs, output formats, permissions, and versions. | Repository-backed create/list exists; edit/archive/delete and tests still needed |
+| Build Tools CRUD/config UI | In progress | Users can configure built-in tools, permissions, metadata, enablement, and reset to defaults. | Repository-backed create/list exists; edit/delete/reset and tests still needed |
 | Add JSON import/export | Not started | Prompts, skills, agents, and allowed tool metadata import/export with schema validation and preview. | Import/export unit tests |
 | Add conflict resolution | Not started | Imports can preview conflicts and choose create, replace, skip, or duplicate where applicable. | Import UI tests |
 
@@ -166,7 +166,7 @@ Progress rule: update this file after each implementation milestone. When a task
 
 Continue with tests and Phase 2 domain modeling:
 
-1. Add focused tests for `AppContainer` and Room DAOs.
-2. Add repositories/use cases over the Phase 2 DAOs.
-3. Add first Library CRUD screen backed by real repositories.
+1. Add focused tests for `AppContainer`, Room DAOs, and `LibraryRepository`.
+2. Expand Library CRUD from create/list to edit, archive, restore, duplicate, and delete.
+3. Add form dialogs for agents, prompts, skills, and tool configs.
 4. Keep `./gradlew :app:assembleDebug --no-daemon` and `./gradlew :app:testDebugUnitTest --no-daemon` green after each slice.

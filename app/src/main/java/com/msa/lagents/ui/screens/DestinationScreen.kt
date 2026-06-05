@@ -5,10 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,14 +32,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.msa.lagents.data.library.LibraryOverview
 import com.msa.lagents.data.settings.AppSettings
 import com.msa.lagents.data.settings.PrivacyMode
+import com.msa.lagents.ui.components.LagentsEmptyState
 import com.msa.lagents.ui.navigation.LagentsDestination
 
 @Composable
 fun DestinationScreen(
     destination: LagentsDestination,
     settings: AppSettings,
+    libraryState: LibraryOverview,
     onDynamicColorChanged: (Boolean) -> Unit,
     onLocalOnlyModeChanged: (Boolean) -> Unit,
     onSensitiveTextRedactionChanged: (Boolean) -> Unit,
@@ -51,10 +52,20 @@ fun DestinationScreen(
     onCycleVoiceInputMode: () -> Unit,
     onAutoReadAssistantResponsesChanged: (Boolean) -> Unit,
     onCycleTranscriptRetention: () -> Unit,
+    onCreateStarterAgent: () -> Unit,
+    onCreateStarterPrompt: () -> Unit,
+    onCreateStarterSkill: () -> Unit,
+    onCreateStarterToolConfig: () -> Unit,
 ) {
     when (destination) {
         LagentsDestination.Chat -> ChatFoundationScreen()
-        LagentsDestination.Library -> LibraryFoundationScreen()
+        LagentsDestination.Library -> LibraryFoundationScreen(
+            libraryState = libraryState,
+            onCreateStarterAgent = onCreateStarterAgent,
+            onCreateStarterPrompt = onCreateStarterPrompt,
+            onCreateStarterSkill = onCreateStarterSkill,
+            onCreateStarterToolConfig = onCreateStarterToolConfig,
+        )
         LagentsDestination.Workflows -> WorkflowsFoundationScreen()
         LagentsDestination.Knowledge -> KnowledgeFoundationScreen()
         LagentsDestination.Models -> ModelsFoundationScreen()
@@ -101,29 +112,108 @@ private fun ChatFoundationScreen() {
 }
 
 @Composable
-private fun LibraryFoundationScreen() {
-    FoundationScreen(
-        title = "Agent asset library",
-        summary = "CRUD surfaces for agents, prompts, skills, and tools will live here with versioning and import/export.",
-        chips = listOf("Agents", "Prompts", "Skills", "Tools"),
-        items = listOf(
-            FoundationItem(
+private fun LibraryFoundationScreen(
+    libraryState: LibraryOverview,
+    onCreateStarterAgent: () -> Unit,
+    onCreateStarterPrompt: () -> Unit,
+    onCreateStarterSkill: () -> Unit,
+    onCreateStarterToolConfig: () -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item {
+            Header(
+                title = "Agent asset library",
+                summary = "Create and manage the reusable building blocks for agents, prompts, skills, and tool configurations.",
+            )
+        }
+        item {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AssetCountChip(label = "Agents", count = libraryState.agents.size)
+                AssetCountChip(label = "Prompts", count = libraryState.prompts.size)
+                AssetCountChip(label = "Skills", count = libraryState.skills.size)
+                AssetCountChip(label = "Tools", count = libraryState.tools.size)
+            }
+        }
+        item {
+            LibrarySection(
+                title = "Agents",
+                body = "Profiles that combine behavior, model routing, skills, tools, memory, voice, and workflow permissions.",
+                actionLabel = "New agent",
+                onAction = onCreateStarterAgent,
+                isEmpty = libraryState.agents.isEmpty(),
+                emptyTitle = "No agents yet",
+                emptyBody = "Create a draft agent profile to start wiring model routing, tools, and memory policy.",
+            ) {
+                libraryState.agents.forEach { agent ->
+                    AssetRow(
+                        title = agent.name,
+                        body = agent.description.ifBlank { agent.systemBehavior },
+                    )
+                }
+            }
+        }
+        item {
+            LibrarySection(
                 title = "Prompts",
-                body = "Reusable templates with variables, preview, archive/restore, versions, and JSON import/export.",
-                icon = Icons.Outlined.Route,
-            ),
-            FoundationItem(
+                body = "Reusable templates with variables, preview data, archive/restore behavior, and versions.",
+                actionLabel = "New prompt",
+                onAction = onCreateStarterPrompt,
+                isEmpty = libraryState.prompts.isEmpty(),
+                emptyTitle = "No prompts yet",
+                emptyBody = "Create a prompt template that agents or skills can reuse.",
+            ) {
+                libraryState.prompts.forEach { prompt ->
+                    AssetRow(
+                        title = prompt.title,
+                        body = prompt.description.ifBlank { "Version ${prompt.currentVersion}" },
+                    )
+                }
+            }
+        }
+        item {
+            LibrarySection(
                 title = "Skills",
                 body = "Prompt-plus-tools bundles that agents and workflows can activate under explicit permissions.",
-                icon = Icons.Outlined.AutoAwesome,
-            ),
-            FoundationItem(
+                actionLabel = "New skill",
+                onAction = onCreateStarterSkill,
+                isEmpty = libraryState.skills.isEmpty(),
+                emptyTitle = "No skills yet",
+                emptyBody = "Create a reusable skill bundle for a repeatable task.",
+            ) {
+                libraryState.skills.forEach { skill ->
+                    AssetRow(
+                        title = skill.title,
+                        body = skill.description.ifBlank { "Version ${skill.currentVersion}" },
+                    )
+                }
+            }
+        }
+        item {
+            LibrarySection(
                 title = "Tools",
-                body = "Built-in capabilities will be configurable without allowing arbitrary executable scripts in v1.",
-                icon = Icons.Outlined.Hub,
-            ),
-        ),
-    )
+                body = "Configurable built-in tools and declarative wrappers around approved app capabilities.",
+                actionLabel = "New tool config",
+                onAction = onCreateStarterToolConfig,
+                isEmpty = libraryState.tools.isEmpty(),
+                emptyTitle = "No tool configs yet",
+                emptyBody = "Create a draft tool configuration to define permissions and approval behavior.",
+            ) {
+                libraryState.tools.forEach { tool ->
+                    AssetRow(
+                        title = tool.displayName,
+                        body = "${tool.category} - ${if (tool.enabled) "Enabled" else "Disabled"}",
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -502,6 +592,114 @@ private fun SettingRow(
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AssetCountChip(
+    label: String,
+    count: Int,
+) {
+    FilterChip(
+        selected = count > 0,
+        onClick = {},
+        label = {
+            Text(text = "$label $count")
+        },
+    )
+}
+
+@Composable
+private fun LibrarySection(
+    title: String,
+    body: String,
+    actionLabel: String,
+    onAction: () -> Unit,
+    isEmpty: Boolean,
+    emptyTitle: String,
+    emptyBody: String,
+    content: @Composable () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = body,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                OutlinedButton(onClick = onAction) {
+                    Text(text = actionLabel)
+                }
+            }
+            if (isEmpty) {
+                LagentsEmptyState(
+                    title = emptyTitle,
+                    body = emptyBody,
+                    actionLabel = actionLabel,
+                    onAction = onAction,
+                )
+            } else {
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+private fun AssetRow(
+    title: String,
+    body: String,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.small,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

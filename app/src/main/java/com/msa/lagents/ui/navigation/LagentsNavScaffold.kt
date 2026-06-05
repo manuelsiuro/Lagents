@@ -37,6 +37,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.msa.lagents.data.library.LibraryOverview
 import com.msa.lagents.data.settings.AppSettings
 import com.msa.lagents.data.settings.ThemePreference
 import com.msa.lagents.ui.screens.DestinationScreen
@@ -45,6 +46,7 @@ import com.msa.lagents.ui.screens.DestinationScreen
 @Composable
 fun LagentsNavScaffold(
     settings: AppSettings,
+    libraryState: LibraryOverview,
     onCycleTheme: () -> Unit,
     onDynamicColorChanged: (Boolean) -> Unit,
     onLocalOnlyModeChanged: (Boolean) -> Unit,
@@ -55,6 +57,10 @@ fun LagentsNavScaffold(
     onCycleVoiceInputMode: () -> Unit,
     onAutoReadAssistantResponsesChanged: (Boolean) -> Unit,
     onCycleTranscriptRetention: () -> Unit,
+    onCreateStarterAgent: () -> Unit,
+    onCreateStarterPrompt: () -> Unit,
+    onCreateStarterSkill: () -> Unit,
+    onCreateStarterToolConfig: () -> Unit,
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -91,6 +97,7 @@ fun LagentsNavScaffold(
                             modifier = Modifier.padding(innerPadding),
                             navController = navController,
                             settings = settings,
+                            libraryState = libraryState,
                             onDynamicColorChanged = onDynamicColorChanged,
                             onLocalOnlyModeChanged = onLocalOnlyModeChanged,
                             onSensitiveTextRedactionChanged = onSensitiveTextRedactionChanged,
@@ -100,6 +107,10 @@ fun LagentsNavScaffold(
                             onCycleVoiceInputMode = onCycleVoiceInputMode,
                             onAutoReadAssistantResponsesChanged = onAutoReadAssistantResponsesChanged,
                             onCycleTranscriptRetention = onCycleTranscriptRetention,
+                            onCreateStarterAgent = onCreateStarterAgent,
+                            onCreateStarterPrompt = onCreateStarterPrompt,
+                            onCreateStarterSkill = onCreateStarterSkill,
+                            onCreateStarterToolConfig = onCreateStarterToolConfig,
                         )
                     }
                 }
@@ -125,6 +136,7 @@ fun LagentsNavScaffold(
                         modifier = Modifier.padding(innerPadding),
                         navController = navController,
                         settings = settings,
+                        libraryState = libraryState,
                         onDynamicColorChanged = onDynamicColorChanged,
                         onLocalOnlyModeChanged = onLocalOnlyModeChanged,
                         onSensitiveTextRedactionChanged = onSensitiveTextRedactionChanged,
@@ -134,6 +146,10 @@ fun LagentsNavScaffold(
                         onCycleVoiceInputMode = onCycleVoiceInputMode,
                         onAutoReadAssistantResponsesChanged = onAutoReadAssistantResponsesChanged,
                         onCycleTranscriptRetention = onCycleTranscriptRetention,
+                        onCreateStarterAgent = onCreateStarterAgent,
+                        onCreateStarterPrompt = onCreateStarterPrompt,
+                        onCreateStarterSkill = onCreateStarterSkill,
+                        onCreateStarterToolConfig = onCreateStarterToolConfig,
                     )
                 }
             }
@@ -146,6 +162,7 @@ private fun LagentsNavHost(
     modifier: Modifier,
     navController: NavHostController,
     settings: AppSettings,
+    libraryState: LibraryOverview,
     onDynamicColorChanged: (Boolean) -> Unit,
     onLocalOnlyModeChanged: (Boolean) -> Unit,
     onSensitiveTextRedactionChanged: (Boolean) -> Unit,
@@ -155,6 +172,10 @@ private fun LagentsNavHost(
     onCycleVoiceInputMode: () -> Unit,
     onAutoReadAssistantResponsesChanged: (Boolean) -> Unit,
     onCycleTranscriptRetention: () -> Unit,
+    onCreateStarterAgent: () -> Unit,
+    onCreateStarterPrompt: () -> Unit,
+    onCreateStarterSkill: () -> Unit,
+    onCreateStarterToolConfig: () -> Unit,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         NavHost(
@@ -166,6 +187,7 @@ private fun LagentsNavHost(
                     DestinationScreen(
                         destination = destination,
                         settings = settings,
+                        libraryState = libraryState,
                         onDynamicColorChanged = onDynamicColorChanged,
                         onLocalOnlyModeChanged = onLocalOnlyModeChanged,
                         onSensitiveTextRedactionChanged = onSensitiveTextRedactionChanged,
@@ -175,6 +197,10 @@ private fun LagentsNavHost(
                         onCycleVoiceInputMode = onCycleVoiceInputMode,
                         onAutoReadAssistantResponsesChanged = onAutoReadAssistantResponsesChanged,
                         onCycleTranscriptRetention = onCycleTranscriptRetention,
+                        onCreateStarterAgent = onCreateStarterAgent,
+                        onCreateStarterPrompt = onCreateStarterPrompt,
+                        onCreateStarterSkill = onCreateStarterSkill,
+                        onCreateStarterToolConfig = onCreateStarterToolConfig,
                     )
                 }
             }
