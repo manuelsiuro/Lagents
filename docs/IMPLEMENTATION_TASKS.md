@@ -36,14 +36,14 @@ Progress rule: update this file after each implementation milestone. When a task
 
 | Task | Status | Done when | Tests or checks |
 | --- | --- | --- | --- |
-| Model conversations and messages | Not started | Conversations and messages persist, load, update, and delete correctly. | DAO and repository tests |
-| Model agents | Not started | Agent profiles persist behavior, model routing, skills, tools, memory, voice, and workflow permissions. | DAO and repository tests |
-| Model prompts | Not started | Prompt templates support variables, versions, tags, archive, restore, duplicate, and preview data. | Prompt repository tests |
-| Model skills | Not started | Skills persist prompt-plus-tools bundles, required inputs, output format, memory policy, safety policy, and versions. | Skill repository tests |
-| Model tool configs | Not started | Built-in tool metadata and user configuration persist without enabling arbitrary script execution. | Tool config tests |
-| Model provider configs | Not started | Provider records store display metadata and encrypted key references. | Provider config tests |
-| Model memories | Not started | Memories support user-approved saves, auto-suggestion review state, search metadata, and deletion. | Memory repository tests |
-| Model debug traces | Not started | Debug trace entities can store prompt, routing, memory, RAG, tool, voice, usage, and error metadata without secrets. | Trace repository tests |
+| Model conversations and messages | In progress | Conversations and messages persist, load, update, and delete correctly. | Room entities/DAO exist; DAO and repository tests still needed |
+| Model agents | In progress | Agent profiles persist behavior, model routing, skills, tools, memory, voice, and workflow permissions. | Room entity/DAO exist; DAO and repository tests still needed |
+| Model prompts | In progress | Prompt templates support variables, versions, tags, archive, restore, duplicate, and preview data. | Prompt and prompt-version entities/DAO exist; repository tests still needed |
+| Model skills | In progress | Skills persist prompt-plus-tools bundles, required inputs, output format, memory policy, safety policy, and versions. | Skill and skill-version entities/DAO exist; repository tests still needed |
+| Model tool configs | In progress | Built-in tool metadata and user configuration persist without enabling arbitrary script execution. | Tool config entity/DAO exist; tests still needed |
+| Model provider configs | In progress | Provider records store display metadata and encrypted key references. | Provider config entity/DAO exist; encrypted key storage still separate |
+| Model memories | In progress | Memories support user-approved saves, auto-suggestion review state, search metadata, and deletion. | Memory entity/DAO exist; repository tests still needed |
+| Model debug traces | In progress | Debug trace entities can store prompt, routing, memory, RAG, tool, voice, usage, and error metadata without secrets. | Debug trace entity/DAO exist; trace creation tests still needed |
 
 ## Phase 3 - Provider Adapters
 
@@ -167,6 +167,6 @@ Progress rule: update this file after each implementation milestone. When a task
 Continue with tests and Phase 2 domain modeling:
 
 1. Add focused tests for `AppContainer` and Room DAOs.
-2. Start Phase 2 entities and repositories for agents, prompts, skills, tools, providers, memories, and debug traces.
+2. Add repositories/use cases over the Phase 2 DAOs.
 3. Add first Library CRUD screen backed by real repositories.
 4. Keep `./gradlew :app:assembleDebug --no-daemon` and `./gradlew :app:testDebugUnitTest --no-daemon` green after each slice.
