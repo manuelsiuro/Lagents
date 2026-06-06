@@ -1,6 +1,7 @@
 package com.msa.lagents.domain.runtime
 
 import com.msa.lagents.data.local.agent.AgentEntity
+import com.msa.lagents.data.local.memory.MemoryEntity
 import com.msa.lagents.data.local.prompt.PromptEntity
 import com.msa.lagents.data.local.skill.SkillEntity
 
@@ -11,13 +12,19 @@ class PromptAssembler {
         skill: SkillEntity? = null,
         prompt: PromptEntity? = null,
         variables: Map<String, String> = emptyMap(),
+        memories: List<MemoryEntity> = emptyList(),
     ): String {
         return buildString {
-            append(agent.systemBehavior)
+            append("Instructions: ${agent.systemBehavior}")
             
+            if (memories.isNotEmpty()) {
+                append("\n\nKnown information about the user or prior context:\n")
+                memories.forEach { append("- ${it.content}\n") }
+            }
+
             skill?.let {
                 append("\n\n")
-                append("Skill Instructions:\n")
+                append("Current Skill Instructions:\n")
                 append(it.instructions)
             }
             
@@ -26,12 +33,12 @@ class PromptAssembler {
                 append("Additional Context:\n")
                 append(applyVariables(it.systemText, variables))
             }
-        }.trim()
+        }
     }
 
     fun assembleUserText(
         prompt: PromptEntity,
-        variables: Map<String, String>,
+        variables: Map<String, String> = emptyMap(),
     ): String {
         return applyVariables(prompt.userText, variables)
     }

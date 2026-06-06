@@ -5,6 +5,7 @@ import com.msa.lagents.data.local.conversation.ConversationDao
 import com.msa.lagents.data.local.conversation.MessageEntity
 import com.msa.lagents.data.local.debug.DebugTraceDao
 import com.msa.lagents.data.local.debug.DebugTraceEntity
+import com.msa.lagents.data.local.memory.MemoryDao
 import com.msa.lagents.data.local.provider.ProviderConfigDao
 import com.msa.lagents.data.provider.ChatModelClientFactory
 import com.msa.lagents.data.settings.AppSettingsRepository
@@ -26,6 +27,7 @@ class DefaultAgentRuntime(
     private val agentDao: AgentDao,
     private val conversationDao: ConversationDao,
     private val providerConfigDao: ProviderConfigDao,
+    private val memoryDao: MemoryDao,
     private val debugTraceDao: DebugTraceDao,
     private val clientFactory: ChatModelClientFactory,
     private val appSettingsRepository: AppSettingsRepository,
@@ -71,15 +73,17 @@ class DefaultAgentRuntime(
                 ?: throw Exception("Could not create client for provider: ${model.providerId}")
         }
 
-        // 5. Load History
+        // 5. Load History and Memories
         val history = conversationDao.observeMessages(conversationId).first()
+        val memories = memoryDao.observeMemoriesByReviewStatus("Approved").first()
         
         // 6. Assemble Prompt
         val systemPrompt = promptAssembler.assembleSystemPrompt(
             agent = agent,
             skill = assets.skill,
-            prompt = assets.prompts.firstOrNull(), // Simplified for now
-            variables = variables
+            prompt = assets.prompts.firstOrNull(),
+            variables = variables,
+            memories = memories
         )
         
         val userText = assets.prompts.firstOrNull()?.let {

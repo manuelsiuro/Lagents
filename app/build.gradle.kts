@@ -68,6 +68,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.sse)
     implementation("androidx.compose.material3:material3-window-size-class")
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

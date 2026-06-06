@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Archive
@@ -57,7 +58,8 @@ import com.msa.lagents.ui.chat.ChatUiState
 import com.msa.lagents.ui.components.LagentsEmptyState
 import com.msa.lagents.ui.debug.DebugUiState
 import com.msa.lagents.ui.knowledge.KnowledgeUiState
-import com.msa.lagents.ui.models.LocalModelManagerState
+import com.msa.lagents.ui.models.ModelsUiState
+import com.msa.lagents.ui.models.ProviderFormDialog
 import com.msa.lagents.ui.navigation.LagentsDestination
 import com.msa.lagents.ui.workflows.WorkflowUiState
 import java.io.InputStream
@@ -103,10 +105,12 @@ fun DestinationScreen(
     onStartVoice: () -> Unit,
     onStopVoice: () -> Unit,
     onTogglePlayback: (String) -> Unit,
-    localModelState: LocalModelManagerState,
+    modelsState: ModelsUiState,
     onRegisterMockModel: () -> Unit,
     onLoadLocalModel: (String) -> Unit,
     onUnloadLocalModel: () -> Unit,
+    onAddProvider: (String, String, String, String?) -> Unit,
+    onDeleteProvider: (String) -> Unit,
     knowledgeState: KnowledgeUiState,
     onCreateKnowledgeCollection: (String, String) -> Unit,
     onDeleteKnowledgeCollection: (String) -> Unit,
@@ -122,6 +126,9 @@ fun DestinationScreen(
     onSelectWorkflow: (String?) -> Unit,
     onProvideWorkflowApproval: (String, Boolean) -> Unit,
     isTwoPane: Boolean = false,
+    onSelectConversation: (String?) -> Unit,
+    onDeleteConversation: (String) -> Unit,
+    onRenameConversation: (String, String) -> Unit,
 ) {
     when (destination) {
         LagentsDestination.Chat -> ChatScreen(
@@ -134,6 +141,9 @@ fun DestinationScreen(
             onStartVoice = onStartVoice,
             onStopVoice = onStopVoice,
             onTogglePlayback = onTogglePlayback,
+            onSelectConversation = onSelectConversation,
+            onDeleteConversation = onDeleteConversation,
+            onRenameConversation = onRenameConversation,
             isTwoPane = isTwoPane,
         )
         LagentsDestination.Library -> LibraryFoundationScreen(
@@ -175,10 +185,12 @@ fun DestinationScreen(
             onSearchQueryChanged = onKnowledgeSearchQueryChanged,
         )
         LagentsDestination.Models -> ModelsFoundationScreen(
-            state = localModelState,
-            onRegisterMock = onRegisterMockModel,
-            onLoad = onLoadLocalModel,
-            onUnload = onUnloadLocalModel,
+            state = modelsState,
+            onRegisterMockLocal = onRegisterMockModel,
+            onLoadLocal = onLoadLocalModel,
+            onUnloadLocal = onUnloadLocalModel,
+            onAddProvider = onAddProvider,
+            onDeleteProvider = onDeleteProvider,
         )
         LagentsDestination.Debug -> DebugFoundationScreen(
             state = debugState,
@@ -381,6 +393,20 @@ private fun WorkflowsFoundationScreen(
                                     }
                                 }
                             }
+                            
+                            if (run.logs.isNotEmpty()) {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                ) {
+                                    Text(
+                                        text = run.logs,
+                                        modifier = Modifier.padding(12.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -579,11 +605,25 @@ private fun KnowledgeFoundationScreen(
 
 @Composable
 private fun ModelsFoundationScreen(
-    state: LocalModelManagerState,
-    onRegisterMock: () -> Unit,
-    onLoad: (String) -> Unit,
-    onUnload: () -> Unit,
+    state: ModelsUiState,
+    onRegisterMockLocal: () -> Unit,
+    onLoadLocal: (String) -> Unit,
+    onUnloadLocal: () -> Unit,
+    onAddProvider: (String, String, String, String?) -> Unit,
+    onDeleteProvider: (String) -> Unit,
 ) {
+    var showProviderDialog by remember { mutableStateOf(false) }
+
+    if (showProviderDialog) {
+        ProviderFormDialog(
+            onDismiss = { showProviderDialog = false },
+            onConfirm = { type, name, key, url ->
+                onAddProvider(type, name, key, url)
+                showProviderDialog = false
+            }
+        )
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(20.dp),
@@ -598,15 +638,34 @@ private fun ModelsFoundationScreen(
         
         item {
             LibrarySection(
+                title = "Cloud Providers",
+                body = "Configure API keys for OpenAI, Anthropic, Gemini, etc.",
+                actionLabel = "Add Provider",
+                onAction = { showProviderDialog = true },
+                isEmpty = state.cloudProviders.isEmpty(),
+                emptyTitle = "No providers",
+            ) {
+                state.cloudProviders.forEach { provider ->
+                    AssetRow(
+                        title = provider.displayName,
+                        body = "Type: ${provider.providerType}",
+                        onDelete = { onDeleteProvider(provider.id) }
+                    )
+                }
+            }
+        }
+
+        item {
+            LibrarySection(
                 title = "Local Models",
                 body = "On-device LLMs for private, offline inference.",
-                actionLabel = "Add Mock Model",
-                onAction = onRegisterMock,
-                isEmpty = state.models.isEmpty(),
+                actionLabel = "Add Mock",
+                onAction = onRegisterMockLocal,
+                isEmpty = state.localModels.isEmpty(),
                 emptyTitle = "No local models",
             ) {
-                state.models.forEach { model ->
-                    val isActive = model.id == state.activeModelId
+                state.localModels.forEach { model ->
+                    val isActive = model.id == state.activeLocalModelId
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
@@ -620,27 +679,16 @@ private fun ModelsFoundationScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(model.displayName, style = MaterialTheme.typography.titleMedium)
                                 Text("${model.engine} • ${(model.sizeBytes / 1_000_000)} MB", style = MaterialTheme.typography.bodySmall)
-                                Text("Status: ${model.status}", style = MaterialTheme.typography.labelSmall)
                             }
                             if (isActive) {
-                                Button(onClick = onUnload) { Text("Unload") }
+                                Button(onClick = onUnloadLocal) { Text("Unload") }
                             } else {
-                                OutlinedButton(onClick = { onLoad(model.id) }) { Text("Load") }
+                                OutlinedButton(onClick = { onLoadLocal(model.id) }) { Text("Load") }
                             }
                         }
                     }
                 }
             }
-        }
-
-        item {
-            FoundationCard(
-                item = FoundationItem(
-                    title = "Cloud Providers",
-                    body = "OpenAI, Anthropic, Gemini, and Mistral adapters are ready. API key management is coming soon.",
-                    icon = Icons.Outlined.Route
-                )
-            )
         }
     }
 }
@@ -827,42 +875,6 @@ private fun SettingsFoundationScreen(
 }
 
 @Composable
-private fun FoundationScreen(
-    title: String,
-    summary: String,
-    chips: List<String>,
-    items: List<FoundationItem>,
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        item {
-            Header(title = title, summary = summary)
-        }
-
-        item {
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                chips.forEach { chip ->
-                    SuggestionChip(
-                        onClick = { },
-                        label = { Text(chip) }
-                    )
-                }
-            }
-        }
-
-        items(items) { item ->
-            FoundationCard(item = item)
-        }
-    }
-}
-
-@Composable
 private fun ChoiceRow(
     title: String,
     summary: String,
@@ -1032,7 +1044,7 @@ private fun LibrarySection(
         if (isEmpty) {
             LagentsEmptyState(
                 title = emptyTitle,
-                body = body, // Using the section body as description for simplicity
+                body = body,
                 modifier = Modifier.padding(vertical = 16.dp)
             )
         } else {

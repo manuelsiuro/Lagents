@@ -23,6 +23,7 @@ import com.msa.lagents.ui.chat.ChatViewModel
 import com.msa.lagents.ui.debug.DebugViewModel
 import com.msa.lagents.ui.knowledge.KnowledgeViewModel
 import com.msa.lagents.ui.library.LibraryViewModel
+import com.msa.lagents.ui.models.ModelsViewModel
 import com.msa.lagents.ui.models.LocalModelManagerViewModel
 import com.msa.lagents.ui.settings.AppSettingsViewModel
 import com.msa.lagents.domain.runtime.tool.SearchKnowledgeTool
@@ -81,7 +82,9 @@ class AppContainer(context: Context) {
     val knowledgeRepository: KnowledgeRepository = KnowledgeRepository(
         knowledgeDao = database.knowledgeDao(),
         embeddingEngine = embeddingEngine,
-        textChunker = textChunker
+        textChunker = textChunker,
+        idGenerator = { java.util.UUID.randomUUID().toString() },
+        nowMillis = { System.currentTimeMillis() }
     )
 
     val workflowRepository: WorkflowRepository = WorkflowRepository(
@@ -111,6 +114,7 @@ class AppContainer(context: Context) {
         agentDao = database.agentDao(),
         conversationDao = database.conversationDao(),
         providerConfigDao = database.providerConfigDao(),
+        memoryDao = database.memoryDao(),
         debugTraceDao = database.debugTraceDao(),
         clientFactory = chatModelClientFactory,
         appSettingsRepository = appSettingsRepository,
@@ -132,6 +136,9 @@ class AppContainer(context: Context) {
 
     val libraryViewModelFactory: LibraryViewModel.Factory =
         LibraryViewModel.Factory(libraryRepository)
+
+    val modelsViewModelFactory: ModelsViewModel.Factory =
+        ModelsViewModel.Factory(localModelManager, providerRepository)
 
     val localModelManagerViewModelFactory: LocalModelManagerViewModel.Factory =
         LocalModelManagerViewModel.Factory(localModelManager)

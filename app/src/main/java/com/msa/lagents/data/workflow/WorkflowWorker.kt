@@ -37,16 +37,25 @@ class WorkflowWorker(
                 conversationId = "workflow-$runId", // Isolated conversation for workflow
                 userInput = definition.goal
             ).collect { event ->
+                val currentRun = workflowDao.getRun(runId)!!
                 when (event) {
+                    is GenerationEvent.ToolCallDelta -> {
+                        event.name?.let { name ->
+                            workflowDao.upsertRun(currentRun.copy(
+                                logs = currentRun.logs + "Agent triggered tool: $name\n"
+                            ))
+                        }
+                    }
                     is GenerationEvent.ToolApprovalRequest -> {
                         // 1. Update DB to notify UI and store tool details
                         workflowDao.upsertRun(
-                            workflowDao.getRun(runId)!!.copy(
+                            currentRun.copy(
                                 status = "Awaiting Approval",
                                 pendingApprovalCallId = event.callId,
                                 pendingApprovalToolName = event.toolName,
                                 pendingApprovalArguments = event.argumentsJson,
-                                approvalDecision = null
+                                approvalDecision = null,
+                                logs = currentRun.logs + "Paused for approval: ${event.toolName}\n"
                             )
                         )
 

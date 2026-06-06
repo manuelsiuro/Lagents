@@ -1,21 +1,20 @@
 package com.msa.lagents.ui
 
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.msa.lagents.core.di.AppContainer
 import com.msa.lagents.ui.chat.ChatViewModel
 import com.msa.lagents.ui.debug.DebugViewModel
 import com.msa.lagents.ui.knowledge.KnowledgeViewModel
-import com.msa.lagents.ui.workflows.WorkflowViewModel
 import com.msa.lagents.ui.library.AgentFormDialog
 import com.msa.lagents.ui.library.LibraryViewModel
 import com.msa.lagents.ui.library.PromptFormDialog
 import com.msa.lagents.ui.library.SkillFormDialog
 import com.msa.lagents.ui.library.ToolConfigFormDialog
-import com.msa.lagents.ui.models.LocalModelManagerViewModel
+import com.msa.lagents.ui.models.ModelsViewModel
 import com.msa.lagents.ui.navigation.LagentsNavScaffold
 import com.msa.lagents.ui.settings.AppSettingsViewModel
 import com.msa.lagents.ui.theme.LagentsTheme
@@ -29,6 +28,7 @@ fun LagentsApp(
         factory = appContainer.appSettingsViewModelFactory,
     )
     val settings by settingsViewModel.uiState.collectAsState()
+
     val libraryViewModel: LibraryViewModel = viewModel(
         factory = appContainer.libraryViewModelFactory,
     )
@@ -39,17 +39,17 @@ fun LagentsApp(
     )
     val chatState by chatViewModel.uiState.collectAsState()
 
-    val localModelViewModel: LocalModelManagerViewModel = viewModel(
-        factory = appContainer.localModelManagerViewModelFactory,
+    val modelsViewModel: ModelsViewModel = viewModel(
+        factory = appContainer.modelsViewModelFactory,
     )
-    val localModelState by localModelViewModel.uiState.collectAsState()
+    val modelsState by modelsViewModel.uiState.collectAsState()
 
     val knowledgeViewModel: KnowledgeViewModel = viewModel(
         factory = appContainer.knowledgeViewModelFactory,
     )
     val knowledgeState by knowledgeViewModel.uiState.collectAsState()
 
-    val workflowViewModel: WorkflowViewModel = viewModel(
+    val workflowViewModel: com.msa.lagents.ui.workflows.WorkflowViewModel = viewModel(
         factory = appContainer.workflowViewModelFactory,
     )
     val workflowState by workflowViewModel.uiState.collectAsState()
@@ -72,7 +72,7 @@ fun LagentsApp(
             settings = settings,
             libraryState = libraryState,
             chatState = chatState,
-            localModelState = localModelState,
+            modelsState = modelsState,
             knowledgeState = knowledgeState,
             workflowState = workflowState,
             debugState = debugState,
@@ -113,9 +113,14 @@ fun LagentsApp(
             onStartVoice = chatViewModel::startVoiceInput,
             onStopVoice = chatViewModel::stopVoiceInput,
             onTogglePlayback = chatViewModel::togglePlayback,
-            onRegisterMockModel = localModelViewModel::registerMockModel,
-            onLoadLocalModel = localModelViewModel::loadModel,
-            onUnloadLocalModel = localModelViewModel::unloadModel,
+            onSelectConversation = chatViewModel::selectConversation,
+            onDeleteConversation = chatViewModel::deleteConversation,
+            onRenameConversation = chatViewModel::renameConversation,
+            onRegisterMockModel = modelsViewModel::registerMockLocalModel,
+            onLoadLocalModel = modelsViewModel::loadLocalModel,
+            onUnloadLocalModel = modelsViewModel::unloadLocalModel,
+            onAddProvider = modelsViewModel::addProvider,
+            onDeleteProvider = modelsViewModel::deleteProvider,
             onCreateKnowledgeCollection = knowledgeViewModel::createCollection,
             onDeleteKnowledgeCollection = knowledgeViewModel::deleteCollection,
             onSelectKnowledgeCollection = knowledgeViewModel::selectCollection,
@@ -150,9 +155,9 @@ fun LagentsApp(
                 onConfirm = libraryViewModel::updateSkill,
             )
         }
-        editingToolConfig?.let { tool ->
+        editingToolConfig?.let { config ->
             ToolConfigFormDialog(
-                toolConfig = tool,
+                toolConfig = config,
                 onDismiss = libraryViewModel::stopEditingToolConfig,
                 onConfirm = libraryViewModel::updateToolConfig,
             )

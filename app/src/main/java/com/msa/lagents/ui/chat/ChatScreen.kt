@@ -5,32 +5,25 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.automirrored.outlined.VolumeUp
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Memory
-import androidx.compose.material.icons.outlined.MenuBook
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Source
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.msa.lagents.data.local.conversation.MessageEntity
 import com.msa.lagents.domain.model.GenerationEvent
-import com.mikepenz.markdown.m3.Markdown
+import com.msa.lagents.domain.voice.SpeechPlaybackState
 
 @Composable
 fun ChatScreen(
@@ -43,15 +36,19 @@ fun ChatScreen(
     onStartVoice: () -> Unit,
     onStopVoice: () -> Unit,
     onTogglePlayback: (String) -> Unit,
+    onSelectConversation: (String?) -> Unit,
+    onDeleteConversation: (String) -> Unit,
+    onRenameConversation: (String, String) -> Unit,
     modifier: Modifier = Modifier,
     isTwoPane: Boolean = false,
 ) {
-    val listState = rememberLazyListState()
     var inputText by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
 
+    // Scroll to bottom when new messages arrive
     LaunchedEffect(state.messages.size, state.streamingText) {
         if (state.messages.isNotEmpty() || state.streamingText.isNotEmpty()) {
-            listState.animateScrollToItem((state.messages.size + (if (state.isGenerating) 1 else 0)).coerceAtLeast(0))
+            listState.animateScrollToItem((state.messages.size + 1).coerceAtLeast(0))
         }
     }
 
@@ -73,8 +70,13 @@ fun ChatScreen(
                         NavigationDrawerItem(
                             label = { Text(conv.title) },
                             selected = conv.id == state.currentConversationId,
-                            onClick = { /* TODO: selectConversation */ },
-                            modifier = Modifier.padding(horizontal = 8.dp)
+                            onClick = { onSelectConversation(conv.id) },
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                            badge = {
+                                IconButton(onClick = { onDeleteConversation(conv.id) }) {
+                                    Icon(Icons.Outlined.Delete, null, modifier = Modifier.size(16.dp))
+                                }
+                            }
                         )
                     }
                 }
@@ -171,7 +173,7 @@ fun ChatScreen(
             }
         }
 
-        // Input Bar
+        // Input Area
         Surface(
             tonalElevation = 2.dp,
             shadowElevation = 8.dp
@@ -226,7 +228,7 @@ fun ChatScreen(
 }
 
 @Composable
-fun MessageBubble(
+private fun MessageBubble(
     message: MessageEntity,
     onTogglePlayback: (String) -> Unit
 ) {
@@ -234,96 +236,82 @@ fun MessageBubble(
     val alignment = if (isUser) Alignment.End else Alignment.Start
     val containerColor = if (isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
     val contentColor = if (isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-    val shape = if (isUser) {
-        RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp)
-    } else {
-        RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp)
-    }
+    val shape = MaterialTheme.shapes.medium
 
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = alignment) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = alignment
+    ) {
         Surface(
             color = containerColor,
             contentColor = contentColor,
-            shape = shape
+            shape = shape,
+            tonalElevation = if (isUser) 0.dp else 1.dp
         ) {
-            Column {
-                if (isUser) {
-                    Text(
-                        text = message.content,
-                        modifier = Modifier.padding(12.dp),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                } else {
-                    Markdown(
-                        content = message.content,
-                        modifier = Modifier.padding(12.dp)
-                    )
-                }
-
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = message.content,
+                    style = MaterialTheme.typography.bodyLarge
+                )
                 if (!isUser) {
                     IconButton(
-                        onClick = { onTogglePlayback(message.content) },
-                        modifier = Modifier.align(Alignment.End).padding(end = 4.dp, bottom = 4.dp).size(32.dp)
+                        onClick = { onTogglePlayback(message.id) },
+                        modifier = Modifier.align(Alignment.End).size(32.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.VolumeUp,
-                            contentDescription = "Speak",
-                            modifier = Modifier.size(16.dp)
-                        )
+                        Icon(Icons.AutoMirrored.Filled.Send, "Speak", modifier = Modifier.size(16.dp)) // Using Send as placeholder for Speak
                     }
                 }
             }
         }
         Text(
-            text = message.role.replaceFirstChar { it.uppercase() },
+            text = if (isUser) "You" else "Assistant",
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            color = MaterialTheme.colorScheme.outline
         )
     }
 }
 
 @Composable
-fun StreamingBubble(text: String) {
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+private fun StreamingBubble(text: String) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start
+    ) {
         Surface(
             color = MaterialTheme.colorScheme.surfaceVariant,
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            shape = RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp)
+            shape = MaterialTheme.shapes.medium,
+            tonalElevation = 1.dp
         ) {
-            Markdown(
-                content = text,
-                modifier = Modifier.padding(12.dp)
+            Text(
+                text = text,
+                modifier = Modifier.padding(12.dp),
+                style = MaterialTheme.typography.bodyLarge
             )
         }
-        Text(
-            text = "Thinking...",
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(top = 4.dp, start = 4.dp),
-            color = MaterialTheme.colorScheme.primary
+        LinearProgressIndicator(
+            modifier = Modifier
+                .width(100.dp)
+                .padding(top = 8.dp)
+                .clip(MaterialTheme.shapes.small)
         )
     }
 }
 
 @Composable
-fun CitationsRow(citations: List<GenerationEvent.Citation>) {
-    Column(modifier = Modifier.padding(vertical = 4.dp)) {
-        Text(
-            text = "Sources",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+private fun CitationsRow(citations: List<GenerationEvent.Citation>) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Sources", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             citations.forEach { citation ->
                 AssistChip(
-                    onClick = { /* TODO: Open document */ },
-                    label = { Text(citation.title) },
-                    leadingIcon = { Icon(Icons.Outlined.Source, null, modifier = Modifier.size(16.dp)) }
+                    onClick = { /* TODO: Open source */ },
+                    label = { Text(citation.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    leadingIcon = { Icon(Icons.Outlined.Lock, null, modifier = Modifier.size(14.dp)) }
                 )
             }
         }
@@ -331,23 +319,18 @@ fun CitationsRow(citations: List<GenerationEvent.Citation>) {
 }
 
 @Composable
-fun MemorySuggestionCard(
+private fun MemorySuggestionCard(
     suggestion: GenerationEvent.MemorySuggestion,
     onAccept: () -> Unit,
-    onIgnore: () -> Unit,
+    onIgnore: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Outlined.Memory, null, tint = MaterialTheme.colorScheme.secondary)
-                Text("New Memory Suggested", style = MaterialTheme.typography.titleSmall)
-            }
-            Text(suggestion.content, style = MaterialTheme.typography.bodyMedium)
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Remember this?", style = MaterialTheme.typography.titleSmall)
+            Text(suggestion.content, style = MaterialTheme.typography.bodySmall)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 TextButton(onClick = onIgnore) { Text("Ignore") }
                 Button(onClick = onAccept) { Text("Save Memory") }
@@ -357,51 +340,51 @@ fun MemorySuggestionCard(
 }
 
 @Composable
-fun WorkflowProgressCard(
+private fun WorkflowProgressCard(
     progress: GenerationEvent.WorkflowProgress,
-    onDismiss: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                Text(progress.status, style = MaterialTheme.typography.titleSmall)
-                Spacer(modifier = Modifier.weight(1f))
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Workflow: Progress", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f)) // Simplified
                 IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.Close, null)
+                    Icon(Icons.Default.Stop, null)
                 }
             }
-            progress.progress?.let {
-                LinearProgressIndicator(progress = { it }, modifier = Modifier.fillMaxWidth())
+            val p = progress.progress
+            if (p != null) {
+                LinearProgressIndicator(
+                    progress = { p },
+                    modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small)
+                )
+            } else {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small)
+                )
             }
+            Text(progress.status, style = MaterialTheme.typography.labelSmall)
         }
     }
 }
 
 @Composable
-fun ToolApprovalCard(
+private fun ToolApprovalCard(
     approval: ToolApprovalState,
     onApprove: () -> Unit,
-    onDeny: () -> Unit,
+    onDeny: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Outlined.Lock, null, tint = MaterialTheme.colorScheme.primary)
-                Text("Tool Approval Required", style = MaterialTheme.typography.titleSmall)
-            }
-            Text("The agent wants to use the tool: ${approval.toolName}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-            Text("Arguments: ${approval.arguments}", style = MaterialTheme.typography.bodySmall, maxLines = 5, overflow = TextOverflow.Ellipsis)
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Tool Approval Required", style = MaterialTheme.typography.titleSmall)
+            Text("The agent wants to use: ${approval.toolName}", style = MaterialTheme.typography.bodyMedium)
+            Text(approval.arguments, style = MaterialTheme.typography.bodySmall, maxLines = 4, overflow = TextOverflow.Ellipsis)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 TextButton(onClick = onDeny) { Text("Deny") }
                 Button(onClick = onApprove) { Text("Approve") }

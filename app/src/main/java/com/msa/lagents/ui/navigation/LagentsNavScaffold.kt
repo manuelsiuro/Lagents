@@ -27,7 +27,7 @@ import com.msa.lagents.data.settings.ThemePreference
 import com.msa.lagents.ui.chat.ChatUiState
 import com.msa.lagents.ui.debug.DebugUiState
 import com.msa.lagents.ui.knowledge.KnowledgeUiState
-import com.msa.lagents.ui.models.LocalModelManagerState
+import com.msa.lagents.ui.models.ModelsUiState
 import com.msa.lagents.ui.screens.DestinationScreen
 import com.msa.lagents.ui.workflows.WorkflowUiState
 import java.io.InputStream
@@ -37,7 +37,7 @@ fun LagentsNavScaffold(
     settings: AppSettings,
     libraryState: LibraryOverview,
     chatState: ChatUiState,
-    localModelState: LocalModelManagerState,
+    modelsState: ModelsUiState,
     knowledgeState: KnowledgeUiState,
     workflowState: WorkflowUiState,
     debugState: DebugUiState,
@@ -78,9 +78,14 @@ fun LagentsNavScaffold(
     onStartVoice: () -> Unit,
     onStopVoice: () -> Unit,
     onTogglePlayback: (String) -> Unit,
+    onSelectConversation: (String?) -> Unit,
+    onDeleteConversation: (String) -> Unit,
+    onRenameConversation: (String, String) -> Unit,
     onRegisterMockModel: () -> Unit,
     onLoadLocalModel: (String) -> Unit,
     onUnloadLocalModel: () -> Unit,
+    onAddProvider: (String, String, String, String?) -> Unit,
+    onDeleteProvider: (String) -> Unit,
     onCreateKnowledgeCollection: (String, String) -> Unit,
     onDeleteKnowledgeCollection: (String) -> Unit,
     onSelectKnowledgeCollection: (String?) -> Unit,
@@ -97,7 +102,7 @@ fun LagentsNavScaffold(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    val selectedDestination = topLevelDestinations.find { destination ->
+    val selectedDestination = topLevelDestinationsList.find { destination ->
         currentDestination?.hierarchy?.any { it.route == destination.route } == true
     } ?: LagentsDestination.Chat
 
@@ -125,7 +130,7 @@ fun LagentsNavScaffold(
                     settings = settings,
                     libraryState = libraryState,
                     chatState = chatState,
-                    localModelState = localModelState,
+                    modelsState = modelsState,
                     knowledgeState = knowledgeState,
                     workflowState = workflowState,
                     debugState = debugState,
@@ -165,9 +170,14 @@ fun LagentsNavScaffold(
                     onStartVoice = onStartVoice,
                     onStopVoice = onStopVoice,
                     onTogglePlayback = onTogglePlayback,
+                    onSelectConversation = onSelectConversation,
+                    onDeleteConversation = onDeleteConversation,
+                    onRenameConversation = onRenameConversation,
                     onRegisterMockModel = onRegisterMockModel,
                     onLoadLocalModel = onLoadLocalModel,
                     onUnloadLocalModel = onUnloadLocalModel,
+                    onAddProvider = onAddProvider,
+                    onDeleteProvider = onDeleteProvider,
                     onCreateKnowledgeCollection = onCreateKnowledgeCollection,
                     onDeleteKnowledgeCollection = onDeleteKnowledgeCollection,
                     onSelectKnowledgeCollection = onSelectKnowledgeCollection,
@@ -204,7 +214,7 @@ fun LagentsNavScaffold(
                 settings = settings,
                 libraryState = libraryState,
                 chatState = chatState,
-                localModelState = localModelState,
+                modelsState = modelsState,
                 knowledgeState = knowledgeState,
                 workflowState = workflowState,
                 debugState = debugState,
@@ -244,9 +254,14 @@ fun LagentsNavScaffold(
                 onStartVoice = onStartVoice,
                 onStopVoice = onStopVoice,
                 onTogglePlayback = onTogglePlayback,
+                onSelectConversation = onSelectConversation,
+                onDeleteConversation = onDeleteConversation,
+                onRenameConversation = onRenameConversation,
                 onRegisterMockModel = onRegisterMockModel,
                 onLoadLocalModel = onLoadLocalModel,
                 onUnloadLocalModel = onUnloadLocalModel,
+                onAddProvider = onAddProvider,
+                onDeleteProvider = onDeleteProvider,
                 onCreateKnowledgeCollection = onCreateKnowledgeCollection,
                 onDeleteKnowledgeCollection = onDeleteKnowledgeCollection,
                 onSelectKnowledgeCollection = onSelectKnowledgeCollection,
@@ -270,7 +285,7 @@ private fun LagentsNavHost(
     settings: AppSettings,
     libraryState: LibraryOverview,
     chatState: ChatUiState,
-    localModelState: LocalModelManagerState,
+    modelsState: ModelsUiState,
     knowledgeState: KnowledgeUiState,
     workflowState: WorkflowUiState,
     debugState: DebugUiState,
@@ -310,9 +325,14 @@ private fun LagentsNavHost(
     onStartVoice: () -> Unit,
     onStopVoice: () -> Unit,
     onTogglePlayback: (String) -> Unit,
+    onSelectConversation: (String?) -> Unit,
+    onDeleteConversation: (String) -> Unit,
+    onRenameConversation: (String, String) -> Unit,
     onRegisterMockModel: () -> Unit,
     onLoadLocalModel: (String) -> Unit,
     onUnloadLocalModel: () -> Unit,
+    onAddProvider: (String, String, String, String?) -> Unit,
+    onDeleteProvider: (String) -> Unit,
     onCreateKnowledgeCollection: (String, String) -> Unit,
     onDeleteKnowledgeCollection: (String) -> Unit,
     onSelectKnowledgeCollection: (String?) -> Unit,
@@ -330,18 +350,13 @@ private fun LagentsNavHost(
             navController = navController,
             startDestination = LagentsDestination.Chat.route,
         ) {
-            topLevelDestinations.forEach { destination ->
+            topLevelDestinationsList.forEach { destination ->
                 composable(destination.route) {
                     DestinationScreen(
                         destination = destination,
                         settings = settings,
                         libraryState = libraryState,
                         chatState = chatState,
-                        localModelState = localModelState,
-                        knowledgeState = knowledgeState,
-                        workflowState = workflowState,
-                        debugState = debugState,
-                        isTwoPane = isTwoPane,
                         onDynamicColorChanged = onDynamicColorChanged,
                         onLocalOnlyModeChanged = onLocalOnlyModeChanged,
                         onSensitiveTextRedactionChanged = onSensitiveTextRedactionChanged,
@@ -377,20 +392,30 @@ private fun LagentsNavHost(
                         onStartVoice = onStartVoice,
                         onStopVoice = onStopVoice,
                         onTogglePlayback = onTogglePlayback,
+                        modelsState = modelsState,
                         onRegisterMockModel = onRegisterMockModel,
                         onLoadLocalModel = onLoadLocalModel,
                         onUnloadLocalModel = onUnloadLocalModel,
+                        onAddProvider = onAddProvider,
+                        onDeleteProvider = onDeleteProvider,
+                        knowledgeState = knowledgeState,
                         onCreateKnowledgeCollection = onCreateKnowledgeCollection,
                         onDeleteKnowledgeCollection = onDeleteKnowledgeCollection,
                         onSelectKnowledgeCollection = onSelectKnowledgeCollection,
                         onImportKnowledgeDocument = onImportKnowledgeDocument,
                         onDeleteKnowledgeDocument = onDeleteKnowledgeDocument,
                         onKnowledgeSearchQueryChanged = onKnowledgeSearchQueryChanged,
+                        debugState = debugState,
+                        workflowState = workflowState,
                         onCreateWorkflow = onCreateWorkflow,
                         onStartWorkflow = onStartWorkflow,
                         onDeleteWorkflow = onDeleteWorkflow,
                         onSelectWorkflow = onSelectWorkflow,
                         onProvideWorkflowApproval = onProvideWorkflowApproval,
+                        isTwoPane = isTwoPane,
+                        onSelectConversation = onSelectConversation,
+                        onDeleteConversation = onDeleteConversation,
+                        onRenameConversation = onRenameConversation,
                     )
                 }
             }
@@ -418,8 +443,8 @@ private fun LagentsTopBar(
                 Icon(
                     imageVector = when (themePreference) {
                         ThemePreference.System -> Icons.Default.Settings
-                        ThemePreference.Light -> Icons.Default.Settings // TODO: Sun
-                        ThemePreference.Dark -> Icons.Default.Settings // TODO: Moon
+                        ThemePreference.Light -> Icons.Default.Settings
+                        ThemePreference.Dark -> Icons.Default.Settings
                     },
                     contentDescription = "Cycle theme"
                 )
@@ -441,7 +466,7 @@ private fun LagentsNavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp,
     ) {
-        topLevelDestinations.forEach { destination ->
+        topLevelDestinationsList.forEach { destination ->
             NavigationBarItem(
                 selected = selectedDestination == destination,
                 onClick = { onNavigate(destination) },
@@ -477,7 +502,7 @@ private fun LagentsNavigationRail(
             )
         }
     ) {
-        topLevelDestinations.forEach { destination ->
+        topLevelDestinationsList.forEach { destination ->
             NavigationRailItem(
                 selected = selectedDestination == destination,
                 onClick = { onNavigate(destination) },
@@ -507,3 +532,13 @@ private fun NavHostController.navigateTopLevel(destination: LagentsDestination) 
         restoreState = true
     }
 }
+
+private val topLevelDestinationsList = listOf(
+    LagentsDestination.Chat,
+    LagentsDestination.Library,
+    LagentsDestination.Workflows,
+    LagentsDestination.Knowledge,
+    LagentsDestination.Models,
+    LagentsDestination.Debug,
+    LagentsDestination.Settings,
+)

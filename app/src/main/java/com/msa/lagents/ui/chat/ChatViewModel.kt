@@ -263,6 +263,24 @@ class ChatViewModel(
         _currentConversationId.value = id
     }
 
+    fun deleteConversation(id: String) {
+        viewModelScope.launch {
+            if (_currentConversationId.value == id) {
+                _currentConversationId.value = null
+            }
+            conversationDao.deleteConversationWithMessages(id)
+        }
+    }
+
+    fun renameConversation(id: String, title: String) {
+        viewModelScope.launch {
+            val conv = conversationDao.observeConversations().first().find { it.id == id }
+            if (conv != null) {
+                conversationDao.upsertConversation(conv.copy(title = title, updatedAtMillis = System.currentTimeMillis()))
+            }
+        }
+    }
+
     fun selectAgent(id: String) {
         _selectedAgentId.value = id
     }

@@ -1,11 +1,12 @@
 package com.msa.lagents.data.knowledge
 
+import com.msa.lagents.data.local.knowledge.KnowledgeDao
 import com.msa.lagents.data.local.knowledge.KnowledgeChunkEntity
 import com.msa.lagents.data.local.knowledge.KnowledgeCollectionEntity
-import com.msa.lagents.data.local.knowledge.KnowledgeDao
 import com.msa.lagents.data.local.knowledge.KnowledgeDocumentEntity
 import com.msa.lagents.domain.knowledge.EmbeddingEngine
 import com.msa.lagents.domain.knowledge.PlainTextExtractor
+import com.msa.lagents.domain.knowledge.TextExtractor
 import com.msa.lagents.domain.knowledge.SimilaritySearch
 import com.msa.lagents.domain.knowledge.TextChunker
 import kotlinx.coroutines.Dispatchers
@@ -14,14 +15,13 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.InputStream
-import java.util.UUID
 
 class KnowledgeRepository(
     private val knowledgeDao: KnowledgeDao,
     private val embeddingEngine: EmbeddingEngine,
-    private val textChunker: TextChunker = TextChunker(),
-    private val idGenerator: () -> String = { UUID.randomUUID().toString() },
-    private val nowMillis: () -> Long = { System.currentTimeMillis() },
+    private val textChunker: TextChunker,
+    private val idGenerator: () -> String,
+    private val nowMillis: () -> Long,
 ) {
     val collections: Flow<List<KnowledgeCollectionEntity>> = knowledgeDao.observeCollections()
 
@@ -42,8 +42,8 @@ class KnowledgeRepository(
         )
     }
 
-    suspend fun deleteCollection(id: String) {
-        knowledgeDao.deleteCollection(id)
+    suspend fun deleteCollection(collectionId: String) {
+        knowledgeDao.deleteCollection(collectionId)
     }
 
     suspend fun importDocument(
@@ -67,8 +67,8 @@ class KnowledgeRepository(
         knowledgeDao.upsertDocument(document)
 
         try {
-            // 2. Extract Text (Only support plain text/markdown for now)
-            val extractor = PlainTextExtractor()
+            // 2. Extract Text
+            val extractor: TextExtractor = PlainTextExtractor()
             val text = extractor.extract(inputStream)
 
             // 3. Chunk Text
@@ -97,18 +97,14 @@ class KnowledgeRepository(
 
     suspend fun search(collectionId: String, query: String, limit: Int = 5): List<SearchResult> {
         val queryEmbedding = embeddingEngine.generateEmbedding(query)
-        val allChunks = knowledgeDao.getChunksForCollection(collectionId)
+        val chunks = knowledgeDao.getChunksForCollection(collectionId)
         
-        return allChunks.mapNotNull { chunk ->
-            val chunkEmbeddingJson = chunk.embeddingJson ?: return@mapNotNull null
-            val chunkEmbedding = Json.decodeFromString<List<Float>>(chunkEmbeddingJson)
-            val score = SimilaritySearch.cosineSimilarity(queryEmbedding, chunkEmbedding)
-            SearchResult(chunk, score)
-        }.sortedByDescending { it.score }.take(limit)
+        return SimilaritySearch.findTopK(queryEmbedding, chunks, limit)
+            .map { SearchResult(it.first, it.second) }
     }
 
-    suspend fun deleteDocument(id: String) {
-        knowledgeDao.deleteDocumentWithChunks(id)
+    suspend fun deleteDocument(documentId: String) {
+        knowledgeDao.deleteDocument(documentId)
     }
 }
 
