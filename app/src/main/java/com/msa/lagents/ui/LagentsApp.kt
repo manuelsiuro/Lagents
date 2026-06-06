@@ -3,15 +3,28 @@ package com.msa.lagents.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.msa.lagents.core.di.AppContainer
+import com.msa.lagents.ui.chat.ChatViewModel
+import com.msa.lagents.ui.debug.DebugViewModel
+import com.msa.lagents.ui.knowledge.KnowledgeViewModel
+import com.msa.lagents.ui.workflows.WorkflowViewModel
+import com.msa.lagents.ui.library.AgentFormDialog
 import com.msa.lagents.ui.library.LibraryViewModel
+import com.msa.lagents.ui.library.PromptFormDialog
+import com.msa.lagents.ui.library.SkillFormDialog
+import com.msa.lagents.ui.library.ToolConfigFormDialog
+import com.msa.lagents.ui.models.LocalModelManagerViewModel
 import com.msa.lagents.ui.navigation.LagentsNavScaffold
 import com.msa.lagents.ui.settings.AppSettingsViewModel
 import com.msa.lagents.ui.theme.LagentsTheme
 
 @Composable
-fun LagentsApp(appContainer: AppContainer) {
+fun LagentsApp(
+    appContainer: AppContainer,
+    windowSizeClass: WindowSizeClass,
+) {
     val settingsViewModel: AppSettingsViewModel = viewModel(
         factory = appContainer.appSettingsViewModelFactory,
     )
@@ -21,6 +34,36 @@ fun LagentsApp(appContainer: AppContainer) {
     )
     val libraryState by libraryViewModel.uiState.collectAsState()
 
+    val chatViewModel: ChatViewModel = viewModel(
+        factory = appContainer.chatViewModelFactory,
+    )
+    val chatState by chatViewModel.uiState.collectAsState()
+
+    val localModelViewModel: LocalModelManagerViewModel = viewModel(
+        factory = appContainer.localModelManagerViewModelFactory,
+    )
+    val localModelState by localModelViewModel.uiState.collectAsState()
+
+    val knowledgeViewModel: KnowledgeViewModel = viewModel(
+        factory = appContainer.knowledgeViewModelFactory,
+    )
+    val knowledgeState by knowledgeViewModel.uiState.collectAsState()
+
+    val workflowViewModel: WorkflowViewModel = viewModel(
+        factory = appContainer.workflowViewModelFactory,
+    )
+    val workflowState by workflowViewModel.uiState.collectAsState()
+
+    val debugViewModel: DebugViewModel = viewModel(
+        factory = appContainer.debugViewModelFactory,
+    )
+    val debugState by debugViewModel.uiState.collectAsState()
+
+    val editingAgent by libraryViewModel.editingAgent.collectAsState()
+    val editingPrompt by libraryViewModel.editingPrompt.collectAsState()
+    val editingSkill by libraryViewModel.editingSkill.collectAsState()
+    val editingToolConfig by libraryViewModel.editingToolConfig.collectAsState()
+
     LagentsTheme(
         themePreference = settings.themePreference,
         dynamicColor = settings.dynamicColorEnabled,
@@ -28,6 +71,12 @@ fun LagentsApp(appContainer: AppContainer) {
         LagentsNavScaffold(
             settings = settings,
             libraryState = libraryState,
+            chatState = chatState,
+            localModelState = localModelState,
+            knowledgeState = knowledgeState,
+            workflowState = workflowState,
+            debugState = debugState,
+            windowSizeClass = windowSizeClass,
             onCycleTheme = settingsViewModel::cycleThemePreference,
             onDynamicColorChanged = settingsViewModel::setDynamicColorEnabled,
             onLocalOnlyModeChanged = settingsViewModel::toggleLocalOnlyMode,
@@ -42,6 +91,71 @@ fun LagentsApp(appContainer: AppContainer) {
             onCreateStarterPrompt = libraryViewModel::createStarterPrompt,
             onCreateStarterSkill = libraryViewModel::createStarterSkill,
             onCreateStarterToolConfig = libraryViewModel::createStarterToolConfig,
+            onArchiveAgent = libraryViewModel::archiveAgent,
+            onDuplicateAgent = libraryViewModel::duplicateAgent,
+            onDeleteAgent = libraryViewModel::deleteAgent,
+            onArchivePrompt = libraryViewModel::archivePrompt,
+            onDuplicatePrompt = libraryViewModel::duplicatePrompt,
+            onDeletePrompt = libraryViewModel::deletePrompt,
+            onArchiveSkill = libraryViewModel::archiveSkill,
+            onDuplicateSkill = libraryViewModel::duplicateSkill,
+            onDeleteSkill = libraryViewModel::deleteSkill,
+            onDeleteToolConfig = libraryViewModel::deleteToolConfig,
+            onEditAgent = libraryViewModel::startEditingAgent,
+            onEditPrompt = libraryViewModel::startEditingPrompt,
+            onEditSkill = libraryViewModel::startEditingSkill,
+            onEditToolConfig = libraryViewModel::startEditingToolConfig,
+            onSendMessage = chatViewModel::sendMessage,
+            onSelectAgent = chatViewModel::selectAgent,
+            onApproveTool = chatViewModel::approveTool,
+            onAcceptMemory = chatViewModel::acceptMemorySuggestion,
+            onDismissWorkflow = chatViewModel::dismissWorkflowProgress,
+            onStartVoice = chatViewModel::startVoiceInput,
+            onStopVoice = chatViewModel::stopVoiceInput,
+            onTogglePlayback = chatViewModel::togglePlayback,
+            onRegisterMockModel = localModelViewModel::registerMockModel,
+            onLoadLocalModel = localModelViewModel::loadModel,
+            onUnloadLocalModel = localModelViewModel::unloadModel,
+            onCreateKnowledgeCollection = knowledgeViewModel::createCollection,
+            onDeleteKnowledgeCollection = knowledgeViewModel::deleteCollection,
+            onSelectKnowledgeCollection = knowledgeViewModel::selectCollection,
+            onImportKnowledgeDocument = knowledgeViewModel::importDocument,
+            onDeleteKnowledgeDocument = knowledgeViewModel::deleteDocument,
+            onKnowledgeSearchQueryChanged = knowledgeViewModel::onSearchQueryChanged,
+            onCreateWorkflow = workflowViewModel::createWorkflow,
+            onStartWorkflow = workflowViewModel::startWorkflow,
+            onDeleteWorkflow = workflowViewModel::deleteWorkflow,
+            onSelectWorkflow = workflowViewModel::selectWorkflow,
+            onProvideWorkflowApproval = workflowViewModel::provideApproval,
         )
+
+        editingAgent?.let { agent ->
+            AgentFormDialog(
+                agent = agent,
+                onDismiss = libraryViewModel::stopEditingAgent,
+                onConfirm = libraryViewModel::updateAgent,
+            )
+        }
+        editingPrompt?.let { prompt ->
+            PromptFormDialog(
+                prompt = prompt,
+                onDismiss = libraryViewModel::stopEditingPrompt,
+                onConfirm = libraryViewModel::updatePrompt,
+            )
+        }
+        editingSkill?.let { skill ->
+            SkillFormDialog(
+                skill = skill,
+                onDismiss = libraryViewModel::stopEditingSkill,
+                onConfirm = libraryViewModel::updateSkill,
+            )
+        }
+        editingToolConfig?.let { tool ->
+            ToolConfigFormDialog(
+                toolConfig = tool,
+                onDismiss = libraryViewModel::stopEditingToolConfig,
+                onConfirm = libraryViewModel::updateToolConfig,
+            )
+        }
     }
 }

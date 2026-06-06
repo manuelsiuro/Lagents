@@ -1,37 +1,21 @@
 package com.msa.lagents.ui.navigation
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.LightMode
-import androidx.compose.material.icons.outlined.MoreHoriz
-import androidx.compose.material.icons.outlined.Storage
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -40,13 +24,24 @@ import androidx.navigation.compose.rememberNavController
 import com.msa.lagents.data.library.LibraryOverview
 import com.msa.lagents.data.settings.AppSettings
 import com.msa.lagents.data.settings.ThemePreference
+import com.msa.lagents.ui.chat.ChatUiState
+import com.msa.lagents.ui.debug.DebugUiState
+import com.msa.lagents.ui.knowledge.KnowledgeUiState
+import com.msa.lagents.ui.models.LocalModelManagerState
 import com.msa.lagents.ui.screens.DestinationScreen
+import com.msa.lagents.ui.workflows.WorkflowUiState
+import java.io.InputStream
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LagentsNavScaffold(
     settings: AppSettings,
     libraryState: LibraryOverview,
+    chatState: ChatUiState,
+    localModelState: LocalModelManagerState,
+    knowledgeState: KnowledgeUiState,
+    workflowState: WorkflowUiState,
+    debugState: DebugUiState,
+    windowSizeClass: WindowSizeClass,
     onCycleTheme: () -> Unit,
     onDynamicColorChanged: (Boolean) -> Unit,
     onLocalOnlyModeChanged: (Boolean) -> Unit,
@@ -61,98 +56,209 @@ fun LagentsNavScaffold(
     onCreateStarterPrompt: () -> Unit,
     onCreateStarterSkill: () -> Unit,
     onCreateStarterToolConfig: () -> Unit,
+    onArchiveAgent: (String) -> Unit,
+    onDuplicateAgent: (String) -> Unit,
+    onDeleteAgent: (String) -> Unit,
+    onArchivePrompt: (String) -> Unit,
+    onDuplicatePrompt: (String) -> Unit,
+    onDeletePrompt: (String) -> Unit,
+    onArchiveSkill: (String) -> Unit,
+    onDuplicateSkill: (String) -> Unit,
+    onDeleteSkill: (String) -> Unit,
+    onDeleteToolConfig: (String) -> Unit,
+    onEditAgent: (String) -> Unit,
+    onEditPrompt: (String) -> Unit,
+    onEditSkill: (String) -> Unit,
+    onEditToolConfig: (String) -> Unit,
+    onSendMessage: (String) -> Unit,
+    onSelectAgent: (String) -> Unit,
+    onApproveTool: (Boolean) -> Unit,
+    onAcceptMemory: (String, Boolean) -> Unit,
+    onDismissWorkflow: () -> Unit,
+    onStartVoice: () -> Unit,
+    onStopVoice: () -> Unit,
+    onTogglePlayback: (String) -> Unit,
+    onRegisterMockModel: () -> Unit,
+    onLoadLocalModel: (String) -> Unit,
+    onUnloadLocalModel: () -> Unit,
+    onCreateKnowledgeCollection: (String, String) -> Unit,
+    onDeleteKnowledgeCollection: (String) -> Unit,
+    onSelectKnowledgeCollection: (String?) -> Unit,
+    onImportKnowledgeDocument: (String, String, InputStream) -> Unit,
+    onDeleteKnowledgeDocument: (String) -> Unit,
+    onKnowledgeSearchQueryChanged: (String) -> Unit,
+    onCreateWorkflow: (String, String, String) -> Unit,
+    onStartWorkflow: (String) -> Unit,
+    onDeleteWorkflow: (String) -> Unit,
+    onSelectWorkflow: (String?) -> Unit,
+    onProvideWorkflowApproval: (String, Boolean) -> Unit,
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    val selectedDestination = topLevelDestinations.firstOrNull { destination ->
+
+    val selectedDestination = topLevelDestinations.find { destination ->
         currentDestination?.hierarchy?.any { it.route == destination.route } == true
     } ?: LagentsDestination.Chat
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
-    ) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val useRail = maxWidth >= 840.dp
+    val isWideScreen = windowSizeClass.widthSizeClass != WindowWidthSizeClass.Compact
+    val isTwoPane = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
 
-            if (useRail) {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    LagentsNavigationRail(
-                        selectedDestination = selectedDestination,
-                        onDestinationSelected = { destination ->
-                            navController.navigateTopLevel(destination)
-                        },
-                    )
-                    Scaffold(
-                        topBar = {
-                            LagentsTopBar(
-                                destination = selectedDestination,
-                                themePreference = settings.themePreference,
-                                onCycleTheme = onCycleTheme,
-                            )
-                        },
-                    ) { innerPadding ->
-                        LagentsNavHost(
-                            modifier = Modifier.padding(innerPadding),
-                            navController = navController,
-                            settings = settings,
-                            libraryState = libraryState,
-                            onDynamicColorChanged = onDynamicColorChanged,
-                            onLocalOnlyModeChanged = onLocalOnlyModeChanged,
-                            onSensitiveTextRedactionChanged = onSensitiveTextRedactionChanged,
-                            onRequireApprovalForSideEffectsChanged = onRequireApprovalForSideEffectsChanged,
-                            onCycleRoutingPreference = onCycleRoutingPreference,
-                            onBudgetWarningsChanged = onBudgetWarningsChanged,
-                            onCycleVoiceInputMode = onCycleVoiceInputMode,
-                            onAutoReadAssistantResponsesChanged = onAutoReadAssistantResponsesChanged,
-                            onCycleTranscriptRetention = onCycleTranscriptRetention,
-                            onCreateStarterAgent = onCreateStarterAgent,
-                            onCreateStarterPrompt = onCreateStarterPrompt,
-                            onCreateStarterSkill = onCreateStarterSkill,
-                            onCreateStarterToolConfig = onCreateStarterToolConfig,
-                        )
-                    }
-                }
-            } else {
-                Scaffold(
-                    topBar = {
-                        LagentsTopBar(
-                            destination = selectedDestination,
-                            themePreference = settings.themePreference,
-                            onCycleTheme = onCycleTheme,
-                        )
-                    },
-                    bottomBar = {
-                        LagentsNavigationBar(
-                            selectedDestination = selectedDestination,
-                            onDestinationSelected = { destination ->
-                                navController.navigateTopLevel(destination)
-                            },
-                        )
-                    },
-                ) { innerPadding ->
-                    LagentsNavHost(
-                        modifier = Modifier.padding(innerPadding),
-                        navController = navController,
-                        settings = settings,
-                        libraryState = libraryState,
-                        onDynamicColorChanged = onDynamicColorChanged,
-                        onLocalOnlyModeChanged = onLocalOnlyModeChanged,
-                        onSensitiveTextRedactionChanged = onSensitiveTextRedactionChanged,
-                        onRequireApprovalForSideEffectsChanged = onRequireApprovalForSideEffectsChanged,
-                        onCycleRoutingPreference = onCycleRoutingPreference,
-                        onBudgetWarningsChanged = onBudgetWarningsChanged,
-                        onCycleVoiceInputMode = onCycleVoiceInputMode,
-                        onAutoReadAssistantResponsesChanged = onAutoReadAssistantResponsesChanged,
-                        onCycleTranscriptRetention = onCycleTranscriptRetention,
-                        onCreateStarterAgent = onCreateStarterAgent,
-                        onCreateStarterPrompt = onCreateStarterPrompt,
-                        onCreateStarterSkill = onCreateStarterSkill,
-                        onCreateStarterToolConfig = onCreateStarterToolConfig,
+    if (isWideScreen) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            LagentsNavigationRail(
+                selectedDestination = selectedDestination,
+                onNavigate = { navController.navigateTopLevel(it) }
+            )
+            Scaffold(
+                topBar = {
+                    LagentsTopBar(
+                        destination = selectedDestination,
+                        themePreference = settings.themePreference,
+                        onCycleTheme = onCycleTheme
                     )
                 }
+            ) { innerPadding ->
+                LagentsNavHost(
+                    modifier = Modifier.padding(innerPadding),
+                    navController = navController,
+                    settings = settings,
+                    libraryState = libraryState,
+                    chatState = chatState,
+                    localModelState = localModelState,
+                    knowledgeState = knowledgeState,
+                    workflowState = workflowState,
+                    debugState = debugState,
+                    isTwoPane = isTwoPane,
+                    onDynamicColorChanged = onDynamicColorChanged,
+                    onLocalOnlyModeChanged = onLocalOnlyModeChanged,
+                    onSensitiveTextRedactionChanged = onSensitiveTextRedactionChanged,
+                    onRequireApprovalForSideEffectsChanged = onRequireApprovalForSideEffectsChanged,
+                    onCycleRoutingPreference = onCycleRoutingPreference,
+                    onBudgetWarningsChanged = onBudgetWarningsChanged,
+                    onCycleVoiceInputMode = onCycleVoiceInputMode,
+                    onAutoReadAssistantResponsesChanged = onAutoReadAssistantResponsesChanged,
+                    onCycleTranscriptRetention = onCycleTranscriptRetention,
+                    onCreateStarterAgent = onCreateStarterAgent,
+                    onCreateStarterPrompt = onCreateStarterPrompt,
+                    onCreateStarterSkill = onCreateStarterSkill,
+                    onCreateStarterToolConfig = onCreateStarterToolConfig,
+                    onArchiveAgent = onArchiveAgent,
+                    onDuplicateAgent = onDuplicateAgent,
+                    onDeleteAgent = onDeleteAgent,
+                    onArchivePrompt = onArchivePrompt,
+                    onDuplicatePrompt = onDuplicatePrompt,
+                    onDeletePrompt = onDeletePrompt,
+                    onArchiveSkill = onArchiveSkill,
+                    onDuplicateSkill = onDuplicateSkill,
+                    onDeleteSkill = onDeleteSkill,
+                    onDeleteToolConfig = onDeleteToolConfig,
+                    onEditAgent = onEditAgent,
+                    onEditPrompt = onEditPrompt,
+                    onEditSkill = onEditSkill,
+                    onEditToolConfig = onEditToolConfig,
+                    onSendMessage = onSendMessage,
+                    onSelectAgent = onSelectAgent,
+                    onApproveTool = onApproveTool,
+                    onAcceptMemory = onAcceptMemory,
+                    onDismissWorkflow = onDismissWorkflow,
+                    onStartVoice = onStartVoice,
+                    onStopVoice = onStopVoice,
+                    onTogglePlayback = onTogglePlayback,
+                    onRegisterMockModel = onRegisterMockModel,
+                    onLoadLocalModel = onLoadLocalModel,
+                    onUnloadLocalModel = onUnloadLocalModel,
+                    onCreateKnowledgeCollection = onCreateKnowledgeCollection,
+                    onDeleteKnowledgeCollection = onDeleteKnowledgeCollection,
+                    onSelectKnowledgeCollection = onSelectKnowledgeCollection,
+                    onImportKnowledgeDocument = onImportKnowledgeDocument,
+                    onDeleteKnowledgeDocument = onDeleteKnowledgeDocument,
+                    onKnowledgeSearchQueryChanged = onKnowledgeSearchQueryChanged,
+                    onCreateWorkflow = onCreateWorkflow,
+                    onStartWorkflow = onStartWorkflow,
+                    onDeleteWorkflow = onDeleteWorkflow,
+                    onSelectWorkflow = onSelectWorkflow,
+                    onProvideWorkflowApproval = onProvideWorkflowApproval,
+                )
             }
+        }
+    } else {
+        Scaffold(
+            topBar = {
+                LagentsTopBar(
+                    destination = selectedDestination,
+                    themePreference = settings.themePreference,
+                    onCycleTheme = onCycleTheme
+                )
+            },
+            bottomBar = {
+                LagentsNavigationBar(
+                    selectedDestination = selectedDestination,
+                    onNavigate = { navController.navigateTopLevel(it) }
+                )
+            }
+        ) { innerPadding ->
+            LagentsNavHost(
+                modifier = Modifier.padding(innerPadding),
+                navController = navController,
+                settings = settings,
+                libraryState = libraryState,
+                chatState = chatState,
+                localModelState = localModelState,
+                knowledgeState = knowledgeState,
+                workflowState = workflowState,
+                debugState = debugState,
+                isTwoPane = isTwoPane,
+                onDynamicColorChanged = onDynamicColorChanged,
+                onLocalOnlyModeChanged = onLocalOnlyModeChanged,
+                onSensitiveTextRedactionChanged = onSensitiveTextRedactionChanged,
+                onRequireApprovalForSideEffectsChanged = onRequireApprovalForSideEffectsChanged,
+                onCycleRoutingPreference = onCycleRoutingPreference,
+                onBudgetWarningsChanged = onBudgetWarningsChanged,
+                onCycleVoiceInputMode = onCycleVoiceInputMode,
+                onAutoReadAssistantResponsesChanged = onAutoReadAssistantResponsesChanged,
+                onCycleTranscriptRetention = onCycleTranscriptRetention,
+                onCreateStarterAgent = onCreateStarterAgent,
+                onCreateStarterPrompt = onCreateStarterPrompt,
+                onCreateStarterSkill = onCreateStarterSkill,
+                onCreateStarterToolConfig = onCreateStarterToolConfig,
+                onArchiveAgent = onArchiveAgent,
+                onDuplicateAgent = onDuplicateAgent,
+                onDeleteAgent = onDeleteAgent,
+                onArchivePrompt = onArchivePrompt,
+                onDuplicatePrompt = onDuplicatePrompt,
+                onDeletePrompt = onDeletePrompt,
+                onArchiveSkill = onArchiveSkill,
+                onDuplicateSkill = onDuplicateSkill,
+                onDeleteSkill = onDeleteSkill,
+                onDeleteToolConfig = onDeleteToolConfig,
+                onEditAgent = onEditAgent,
+                onEditPrompt = onEditPrompt,
+                onEditSkill = onEditSkill,
+                onEditToolConfig = onEditToolConfig,
+                onSendMessage = onSendMessage,
+                onSelectAgent = onSelectAgent,
+                onApproveTool = onApproveTool,
+                onAcceptMemory = onAcceptMemory,
+                onDismissWorkflow = onDismissWorkflow,
+                onStartVoice = onStartVoice,
+                onStopVoice = onStopVoice,
+                onTogglePlayback = onTogglePlayback,
+                onRegisterMockModel = onRegisterMockModel,
+                onLoadLocalModel = onLoadLocalModel,
+                onUnloadLocalModel = onUnloadLocalModel,
+                onCreateKnowledgeCollection = onCreateKnowledgeCollection,
+                onDeleteKnowledgeCollection = onDeleteKnowledgeCollection,
+                onSelectKnowledgeCollection = onSelectKnowledgeCollection,
+                onImportKnowledgeDocument = onImportKnowledgeDocument,
+                onDeleteKnowledgeDocument = onDeleteKnowledgeDocument,
+                onKnowledgeSearchQueryChanged = onKnowledgeSearchQueryChanged,
+                onCreateWorkflow = onCreateWorkflow,
+                onStartWorkflow = onStartWorkflow,
+                onDeleteWorkflow = onDeleteWorkflow,
+                onSelectWorkflow = onSelectWorkflow,
+                onProvideWorkflowApproval = onProvideWorkflowApproval,
+            )
         }
     }
 }
@@ -163,6 +269,12 @@ private fun LagentsNavHost(
     navController: NavHostController,
     settings: AppSettings,
     libraryState: LibraryOverview,
+    chatState: ChatUiState,
+    localModelState: LocalModelManagerState,
+    knowledgeState: KnowledgeUiState,
+    workflowState: WorkflowUiState,
+    debugState: DebugUiState,
+    isTwoPane: Boolean,
     onDynamicColorChanged: (Boolean) -> Unit,
     onLocalOnlyModeChanged: (Boolean) -> Unit,
     onSensitiveTextRedactionChanged: (Boolean) -> Unit,
@@ -176,6 +288,42 @@ private fun LagentsNavHost(
     onCreateStarterPrompt: () -> Unit,
     onCreateStarterSkill: () -> Unit,
     onCreateStarterToolConfig: () -> Unit,
+    onArchiveAgent: (String) -> Unit,
+    onDuplicateAgent: (String) -> Unit,
+    onDeleteAgent: (String) -> Unit,
+    onArchivePrompt: (String) -> Unit,
+    onDuplicatePrompt: (String) -> Unit,
+    onDeletePrompt: (String) -> Unit,
+    onArchiveSkill: (String) -> Unit,
+    onDuplicateSkill: (String) -> Unit,
+    onDeleteSkill: (String) -> Unit,
+    onDeleteToolConfig: (String) -> Unit,
+    onEditAgent: (String) -> Unit,
+    onEditPrompt: (String) -> Unit,
+    onEditSkill: (String) -> Unit,
+    onEditToolConfig: (String) -> Unit,
+    onSendMessage: (String) -> Unit,
+    onSelectAgent: (String) -> Unit,
+    onApproveTool: (Boolean) -> Unit,
+    onAcceptMemory: (String, Boolean) -> Unit,
+    onDismissWorkflow: () -> Unit,
+    onStartVoice: () -> Unit,
+    onStopVoice: () -> Unit,
+    onTogglePlayback: (String) -> Unit,
+    onRegisterMockModel: () -> Unit,
+    onLoadLocalModel: (String) -> Unit,
+    onUnloadLocalModel: () -> Unit,
+    onCreateKnowledgeCollection: (String, String) -> Unit,
+    onDeleteKnowledgeCollection: (String) -> Unit,
+    onSelectKnowledgeCollection: (String?) -> Unit,
+    onImportKnowledgeDocument: (String, String, InputStream) -> Unit,
+    onDeleteKnowledgeDocument: (String) -> Unit,
+    onKnowledgeSearchQueryChanged: (String) -> Unit,
+    onCreateWorkflow: (String, String, String) -> Unit,
+    onStartWorkflow: (String) -> Unit,
+    onDeleteWorkflow: (String) -> Unit,
+    onSelectWorkflow: (String?) -> Unit,
+    onProvideWorkflowApproval: (String, Boolean) -> Unit,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         NavHost(
@@ -188,6 +336,12 @@ private fun LagentsNavHost(
                         destination = destination,
                         settings = settings,
                         libraryState = libraryState,
+                        chatState = chatState,
+                        localModelState = localModelState,
+                        knowledgeState = knowledgeState,
+                        workflowState = workflowState,
+                        debugState = debugState,
+                        isTwoPane = isTwoPane,
                         onDynamicColorChanged = onDynamicColorChanged,
                         onLocalOnlyModeChanged = onLocalOnlyModeChanged,
                         onSensitiveTextRedactionChanged = onSensitiveTextRedactionChanged,
@@ -201,6 +355,42 @@ private fun LagentsNavHost(
                         onCreateStarterPrompt = onCreateStarterPrompt,
                         onCreateStarterSkill = onCreateStarterSkill,
                         onCreateStarterToolConfig = onCreateStarterToolConfig,
+                        onArchiveAgent = onArchiveAgent,
+                        onDuplicateAgent = onDuplicateAgent,
+                        onDeleteAgent = onDeleteAgent,
+                        onArchivePrompt = onArchivePrompt,
+                        onDuplicatePrompt = onDuplicatePrompt,
+                        onDeletePrompt = onDeletePrompt,
+                        onArchiveSkill = onArchiveSkill,
+                        onDuplicateSkill = onDuplicateSkill,
+                        onDeleteSkill = onDeleteSkill,
+                        onDeleteToolConfig = onDeleteToolConfig,
+                        onEditAgent = onEditAgent,
+                        onEditPrompt = onEditPrompt,
+                        onEditSkill = onEditSkill,
+                        onEditToolConfig = onEditToolConfig,
+                        onSendMessage = onSendMessage,
+                        onSelectAgent = onSelectAgent,
+                        onApproveTool = onApproveTool,
+                        onAcceptMemory = onAcceptMemory,
+                        onDismissWorkflow = onDismissWorkflow,
+                        onStartVoice = onStartVoice,
+                        onStopVoice = onStopVoice,
+                        onTogglePlayback = onTogglePlayback,
+                        onRegisterMockModel = onRegisterMockModel,
+                        onLoadLocalModel = onLoadLocalModel,
+                        onUnloadLocalModel = onUnloadLocalModel,
+                        onCreateKnowledgeCollection = onCreateKnowledgeCollection,
+                        onDeleteKnowledgeCollection = onDeleteKnowledgeCollection,
+                        onSelectKnowledgeCollection = onSelectKnowledgeCollection,
+                        onImportKnowledgeDocument = onImportKnowledgeDocument,
+                        onDeleteKnowledgeDocument = onDeleteKnowledgeDocument,
+                        onKnowledgeSearchQueryChanged = onKnowledgeSearchQueryChanged,
+                        onCreateWorkflow = onCreateWorkflow,
+                        onStartWorkflow = onStartWorkflow,
+                        onDeleteWorkflow = onDeleteWorkflow,
+                        onSelectWorkflow = onSelectWorkflow,
+                        onProvideWorkflowApproval = onProvideWorkflowApproval,
                     )
                 }
             }
@@ -215,92 +405,59 @@ private fun LagentsTopBar(
     themePreference: ThemePreference,
     onCycleTheme: () -> Unit,
 ) {
-    CenterAlignedTopAppBar(
+    TopAppBar(
         title = {
-            Text(text = destination.label)
+            Text(
+                text = destination.label,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
         },
         actions = {
             IconButton(onClick = onCycleTheme) {
-                val icon = when (themePreference) {
-                    ThemePreference.Dark -> Icons.Outlined.DarkMode
-                    ThemePreference.Light -> Icons.Outlined.LightMode
-                    ThemePreference.System -> Icons.Outlined.Storage
-                }
                 Icon(
-                    imageVector = icon,
-                    contentDescription = "Change theme",
+                    imageVector = when (themePreference) {
+                        ThemePreference.System -> Icons.Default.Settings
+                        ThemePreference.Light -> Icons.Default.Settings // TODO: Sun
+                        ThemePreference.Dark -> Icons.Default.Settings // TODO: Moon
+                    },
+                    contentDescription = "Cycle theme"
                 )
             }
         },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+        )
     )
 }
 
 @Composable
 private fun LagentsNavigationBar(
     selectedDestination: LagentsDestination,
-    onDestinationSelected: (LagentsDestination) -> Unit,
+    onNavigate: (LagentsDestination) -> Unit,
 ) {
-    var showMoreMenu by remember { mutableStateOf(false) }
-    val primaryDestinations = listOf(
-        LagentsDestination.Chat,
-        LagentsDestination.Library,
-        LagentsDestination.Workflows,
-        LagentsDestination.Models,
-    )
-    val overflowDestinations = listOf(
-        LagentsDestination.Knowledge,
-        LagentsDestination.Debug,
-        LagentsDestination.Settings,
-    )
-
-    NavigationBar {
-        primaryDestinations.forEach { destination ->
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
+    ) {
+        topLevelDestinations.forEach { destination ->
             NavigationBarItem(
                 selected = selectedDestination == destination,
-                onClick = { onDestinationSelected(destination) },
+                onClick = { onNavigate(destination) },
                 icon = {
                     Icon(
                         imageVector = destination.icon,
-                        contentDescription = destination.label,
+                        contentDescription = destination.label
                     )
                 },
                 label = {
-                    Text(text = destination.label)
-                },
+                    Text(
+                        text = destination.label,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
             )
-        }
-        NavigationBarItem(
-            selected = selectedDestination in overflowDestinations,
-            onClick = { showMoreMenu = true },
-            icon = {
-                Icon(
-                    imageVector = Icons.Outlined.MoreHoriz,
-                    contentDescription = "More destinations",
-                )
-            },
-            label = {
-                Text(text = "More")
-            },
-        )
-        DropdownMenu(
-            expanded = showMoreMenu,
-            onDismissRequest = { showMoreMenu = false },
-        ) {
-            overflowDestinations.forEach { destination ->
-                DropdownMenuItem(
-                    text = { Text(text = destination.label) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = destination.icon,
-                            contentDescription = null,
-                        )
-                    },
-                    onClick = {
-                        showMoreMenu = false
-                        onDestinationSelected(destination)
-                    },
-                )
-            }
         }
     }
 }
@@ -308,32 +465,42 @@ private fun LagentsNavigationBar(
 @Composable
 private fun LagentsNavigationRail(
     selectedDestination: LagentsDestination,
-    onDestinationSelected: (LagentsDestination) -> Unit,
+    onNavigate: (LagentsDestination) -> Unit,
 ) {
-    NavigationRail {
+    NavigationRail(
+        containerColor = MaterialTheme.colorScheme.surface,
+        header = {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = null,
+                modifier = Modifier.padding(vertical = 12.dp)
+            )
+        }
+    ) {
         topLevelDestinations.forEach { destination ->
             NavigationRailItem(
                 selected = selectedDestination == destination,
-                onClick = { onDestinationSelected(destination) },
+                onClick = { onNavigate(destination) },
                 icon = {
                     Icon(
                         imageVector = destination.icon,
-                        contentDescription = destination.label,
+                        contentDescription = destination.label
                     )
                 },
                 label = {
-                    Text(text = destination.label)
-                },
+                    Text(
+                        text = destination.label,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
             )
         }
     }
 }
 
-private fun androidx.navigation.NavHostController.navigateTopLevel(
-    destination: LagentsDestination,
-) {
+private fun NavHostController.navigateTopLevel(destination: LagentsDestination) {
     navigate(destination.route) {
-        popUpTo(graph.startDestinationId) {
+        popUpTo(graph.findStartDestination().id) {
             saveState = true
         }
         launchSingleTop = true

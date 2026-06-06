@@ -1,48 +1,73 @@
 package com.msa.lagents.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.GraphicEq
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Hub
-import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Route
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.msa.lagents.data.library.LibraryOverview
+import com.msa.lagents.data.local.agent.AgentEntity
+import com.msa.lagents.data.local.conversation.MessageEntity
+import com.msa.lagents.data.local.prompt.PromptEntity
+import com.msa.lagents.data.local.skill.SkillEntity
+import com.msa.lagents.data.local.tool.ToolConfigEntity
 import com.msa.lagents.data.settings.AppSettings
 import com.msa.lagents.data.settings.PrivacyMode
+import com.msa.lagents.data.settings.ThemePreference
+import com.msa.lagents.ui.chat.ChatScreen
+import com.msa.lagents.ui.chat.ChatUiState
 import com.msa.lagents.ui.components.LagentsEmptyState
+import com.msa.lagents.ui.debug.DebugUiState
+import com.msa.lagents.ui.knowledge.KnowledgeUiState
+import com.msa.lagents.ui.models.LocalModelManagerState
 import com.msa.lagents.ui.navigation.LagentsDestination
+import com.msa.lagents.ui.workflows.WorkflowUiState
+import java.io.InputStream
 
 @Composable
 fun DestinationScreen(
     destination: LagentsDestination,
     settings: AppSettings,
     libraryState: LibraryOverview,
+    chatState: ChatUiState,
     onDynamicColorChanged: (Boolean) -> Unit,
     onLocalOnlyModeChanged: (Boolean) -> Unit,
     onSensitiveTextRedactionChanged: (Boolean) -> Unit,
@@ -56,20 +81,108 @@ fun DestinationScreen(
     onCreateStarterPrompt: () -> Unit,
     onCreateStarterSkill: () -> Unit,
     onCreateStarterToolConfig: () -> Unit,
+    onArchiveAgent: (String) -> Unit,
+    onDuplicateAgent: (String) -> Unit,
+    onDeleteAgent: (String) -> Unit,
+    onArchivePrompt: (String) -> Unit,
+    onDuplicatePrompt: (String) -> Unit,
+    onDeletePrompt: (String) -> Unit,
+    onArchiveSkill: (String) -> Unit,
+    onDuplicateSkill: (String) -> Unit,
+    onDeleteSkill: (String) -> Unit,
+    onDeleteToolConfig: (String) -> Unit,
+    onEditAgent: (String) -> Unit,
+    onEditPrompt: (String) -> Unit,
+    onEditSkill: (String) -> Unit,
+    onEditToolConfig: (String) -> Unit,
+    onSendMessage: (String) -> Unit,
+    onSelectAgent: (String) -> Unit,
+    onApproveTool: (Boolean) -> Unit,
+    onAcceptMemory: (String, Boolean) -> Unit,
+    onDismissWorkflow: () -> Unit,
+    onStartVoice: () -> Unit,
+    onStopVoice: () -> Unit,
+    onTogglePlayback: (String) -> Unit,
+    localModelState: LocalModelManagerState,
+    onRegisterMockModel: () -> Unit,
+    onLoadLocalModel: (String) -> Unit,
+    onUnloadLocalModel: () -> Unit,
+    knowledgeState: KnowledgeUiState,
+    onCreateKnowledgeCollection: (String, String) -> Unit,
+    onDeleteKnowledgeCollection: (String) -> Unit,
+    onSelectKnowledgeCollection: (String?) -> Unit,
+    onImportKnowledgeDocument: (String, String, InputStream) -> Unit,
+    onDeleteKnowledgeDocument: (String) -> Unit,
+    onKnowledgeSearchQueryChanged: (String) -> Unit,
+    debugState: DebugUiState,
+    workflowState: WorkflowUiState,
+    onCreateWorkflow: (String, String, String) -> Unit,
+    onStartWorkflow: (String) -> Unit,
+    onDeleteWorkflow: (String) -> Unit,
+    onSelectWorkflow: (String?) -> Unit,
+    onProvideWorkflowApproval: (String, Boolean) -> Unit,
+    isTwoPane: Boolean = false,
 ) {
     when (destination) {
-        LagentsDestination.Chat -> ChatFoundationScreen()
+        LagentsDestination.Chat -> ChatScreen(
+            state = chatState,
+            onSendMessage = onSendMessage,
+            onSelectAgent = onSelectAgent,
+            onApproveTool = onApproveTool,
+            onAcceptMemory = onAcceptMemory,
+            onDismissWorkflow = onDismissWorkflow,
+            onStartVoice = onStartVoice,
+            onStopVoice = onStopVoice,
+            onTogglePlayback = onTogglePlayback,
+            isTwoPane = isTwoPane,
+        )
         LagentsDestination.Library -> LibraryFoundationScreen(
             libraryState = libraryState,
             onCreateStarterAgent = onCreateStarterAgent,
             onCreateStarterPrompt = onCreateStarterPrompt,
             onCreateStarterSkill = onCreateStarterSkill,
             onCreateStarterToolConfig = onCreateStarterToolConfig,
+            onArchiveAgent = onArchiveAgent,
+            onDuplicateAgent = onDuplicateAgent,
+            onDeleteAgent = onDeleteAgent,
+            onArchivePrompt = onArchivePrompt,
+            onDuplicatePrompt = onDuplicatePrompt,
+            onDeletePrompt = onDeletePrompt,
+            onArchiveSkill = onArchiveSkill,
+            onDuplicateSkill = onDuplicateSkill,
+            onDeleteSkill = onDeleteSkill,
+            onDeleteToolConfig = onDeleteToolConfig,
+            onEditAgent = onEditAgent,
+            onEditPrompt = onEditPrompt,
+            onEditSkill = onEditSkill,
+            onEditToolConfig = onEditToolConfig,
         )
-        LagentsDestination.Workflows -> WorkflowsFoundationScreen()
-        LagentsDestination.Knowledge -> KnowledgeFoundationScreen()
-        LagentsDestination.Models -> ModelsFoundationScreen()
-        LagentsDestination.Debug -> DebugFoundationScreen()
+        LagentsDestination.Workflows -> WorkflowsFoundationScreen(
+            state = workflowState,
+            onCreate = onCreateWorkflow,
+            onStart = onStartWorkflow,
+            onDelete = onDeleteWorkflow,
+            onSelect = onSelectWorkflow,
+            onProvideApproval = onProvideWorkflowApproval,
+        )
+        LagentsDestination.Knowledge -> KnowledgeFoundationScreen(
+            state = knowledgeState,
+            onCreate = onCreateKnowledgeCollection,
+            onDelete = onDeleteKnowledgeCollection,
+            onSelect = onSelectKnowledgeCollection,
+            onImport = onImportKnowledgeDocument,
+            onDeleteDocument = onDeleteKnowledgeDocument,
+            onSearchQueryChanged = onKnowledgeSearchQueryChanged,
+        )
+        LagentsDestination.Models -> ModelsFoundationScreen(
+            state = localModelState,
+            onRegisterMock = onRegisterMockModel,
+            onLoad = onLoadLocalModel,
+            onUnload = onUnloadLocalModel,
+        )
+        LagentsDestination.Debug -> DebugFoundationScreen(
+            state = debugState,
+        )
         LagentsDestination.Settings -> SettingsFoundationScreen(
             settings = settings,
             onDynamicColorChanged = onDynamicColorChanged,
@@ -86,38 +199,26 @@ fun DestinationScreen(
 }
 
 @Composable
-private fun ChatFoundationScreen() {
-    FoundationScreen(
-        title = "Agent workspace",
-        summary = "The foundation is ready for streaming chat, skills, tools, local models, voice, and supervised workflows.",
-        chips = listOf("OpenAI", "Anthropic", "Gemini", "Mistral", "Local"),
-        items = listOf(
-            FoundationItem(
-                title = "Tool-using chat",
-                body = "The chat surface will host model routing, approvals, citations, memory suggestions, and regenerate/stop controls.",
-                icon = Icons.Outlined.AutoAwesome,
-            ),
-            FoundationItem(
-                title = "Voice ready",
-                body = "Speech-to-text and text-to-speech controls have a defined place in the shell and settings model.",
-                icon = Icons.Outlined.GraphicEq,
-            ),
-            FoundationItem(
-                title = "Manual wiring",
-                body = "The app is connected through an explicit container, not generated dependency injection.",
-                icon = Icons.Outlined.Hub,
-            ),
-        ),
-    )
-}
-
-@Composable
 private fun LibraryFoundationScreen(
     libraryState: LibraryOverview,
     onCreateStarterAgent: () -> Unit,
     onCreateStarterPrompt: () -> Unit,
     onCreateStarterSkill: () -> Unit,
     onCreateStarterToolConfig: () -> Unit,
+    onArchiveAgent: (String) -> Unit,
+    onDuplicateAgent: (String) -> Unit,
+    onDeleteAgent: (String) -> Unit,
+    onArchivePrompt: (String) -> Unit,
+    onDuplicatePrompt: (String) -> Unit,
+    onDeletePrompt: (String) -> Unit,
+    onArchiveSkill: (String) -> Unit,
+    onDuplicateSkill: (String) -> Unit,
+    onDeleteSkill: (String) -> Unit,
+    onDeleteToolConfig: (String) -> Unit,
+    onEditAgent: (String) -> Unit,
+    onEditPrompt: (String) -> Unit,
+    onEditSkill: (String) -> Unit,
+    onEditToolConfig: (String) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -126,89 +227,92 @@ private fun LibraryFoundationScreen(
     ) {
         item {
             Header(
-                title = "Agent asset library",
-                summary = "Create and manage the reusable building blocks for agents, prompts, skills, and tool configurations.",
+                title = "Asset library",
+                summary = "Create and manage agents, reusable prompt templates, skills (bundled tools), and tool configurations.",
             )
         }
-        item {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                AssetCountChip(label = "Agents", count = libraryState.agents.size)
-                AssetCountChip(label = "Prompts", count = libraryState.prompts.size)
-                AssetCountChip(label = "Skills", count = libraryState.skills.size)
-                AssetCountChip(label = "Tools", count = libraryState.tools.size)
-            }
-        }
+
         item {
             LibrarySection(
                 title = "Agents",
-                body = "Profiles that combine behavior, model routing, skills, tools, memory, voice, and workflow permissions.",
-                actionLabel = "New agent",
+                body = "Persona and behavior definitions.",
+                actionLabel = "New Agent",
                 onAction = onCreateStarterAgent,
                 isEmpty = libraryState.agents.isEmpty(),
-                emptyTitle = "No agents yet",
-                emptyBody = "Create a draft agent profile to start wiring model routing, tools, and memory policy.",
+                emptyTitle = "No agents",
             ) {
                 libraryState.agents.forEach { agent ->
                     AssetRow(
                         title = agent.name,
-                        body = agent.description.ifBlank { agent.systemBehavior },
+                        body = agent.systemBehavior,
+                        onArchive = { onArchiveAgent(agent.id) },
+                        onDuplicate = { onDuplicateAgent(agent.id) },
+                        onDelete = { onDeleteAgent(agent.id) },
+                        onEdit = { onEditAgent(agent.id) }
                     )
                 }
             }
         }
+
         item {
             LibrarySection(
                 title = "Prompts",
-                body = "Reusable templates with variables, preview data, archive/restore behavior, and versions.",
-                actionLabel = "New prompt",
+                body = "Reusable system and user message templates.",
+                actionLabel = "New Prompt",
                 onAction = onCreateStarterPrompt,
                 isEmpty = libraryState.prompts.isEmpty(),
-                emptyTitle = "No prompts yet",
-                emptyBody = "Create a prompt template that agents or skills can reuse.",
+                emptyTitle = "No prompts",
             ) {
                 libraryState.prompts.forEach { prompt ->
                     AssetRow(
                         title = prompt.title,
-                        body = prompt.description.ifBlank { "Version ${prompt.currentVersion}" },
+                        body = prompt.description,
+                        onArchive = { onArchivePrompt(prompt.id) },
+                        onDuplicate = { onDuplicatePrompt(prompt.id) },
+                        onDelete = { onDeletePrompt(prompt.id) },
+                        onEdit = { onEditPrompt(prompt.id) }
                     )
                 }
             }
         }
+
         item {
             LibrarySection(
                 title = "Skills",
-                body = "Prompt-plus-tools bundles that agents and workflows can activate under explicit permissions.",
-                actionLabel = "New skill",
+                body = "Bundled prompt and tool sets.",
+                actionLabel = "New Skill",
                 onAction = onCreateStarterSkill,
                 isEmpty = libraryState.skills.isEmpty(),
-                emptyTitle = "No skills yet",
-                emptyBody = "Create a reusable skill bundle for a repeatable task.",
+                emptyTitle = "No skills",
             ) {
                 libraryState.skills.forEach { skill ->
                     AssetRow(
                         title = skill.title,
-                        body = skill.description.ifBlank { "Version ${skill.currentVersion}" },
+                        body = skill.instructions,
+                        onArchive = { onArchiveSkill(skill.id) },
+                        onDuplicate = { onDuplicateSkill(skill.id) },
+                        onDelete = { onDeleteSkill(skill.id) },
+                        onEdit = { onEditSkill(skill.id) }
                     )
                 }
             }
         }
+
         item {
             LibrarySection(
                 title = "Tools",
-                body = "Configurable built-in tools and declarative wrappers around approved app capabilities.",
-                actionLabel = "New tool config",
+                body = "Platform and external tool settings.",
+                actionLabel = "New Config",
                 onAction = onCreateStarterToolConfig,
                 isEmpty = libraryState.tools.isEmpty(),
-                emptyTitle = "No tool configs yet",
-                emptyBody = "Create a draft tool configuration to define permissions and approval behavior.",
+                emptyTitle = "No tool configurations",
             ) {
                 libraryState.tools.forEach { tool ->
                     AssetRow(
                         title = tool.displayName,
-                        body = "${tool.category} - ${if (tool.enabled) "Enabled" else "Disabled"}",
+                        body = "Enabled: ${tool.enabled}",
+                        onDelete = { onDeleteToolConfig(tool.id) },
+                        onEdit = { onEditToolConfig(tool.id) }
                     )
                 }
             }
@@ -217,87 +321,365 @@ private fun LibraryFoundationScreen(
 }
 
 @Composable
-private fun WorkflowsFoundationScreen() {
-    FoundationScreen(
-        title = "Supervised autonomy",
-        summary = "Workflows will run in WorkManager with progress, logs, retries, cancellation, and approval gates.",
-        chips = listOf("WorkManager", "Approvals", "Logs", "Retries"),
-        items = listOf(
-            FoundationItem(
-                title = "Visible progress",
-                body = "Runs should be inspectable in chat and from the workflow detail screen.",
-                icon = Icons.Outlined.Route,
-            ),
-            FoundationItem(
-                title = "Side-effect safety",
-                body = "Every side-effectful action pauses for confirmation before execution.",
-                icon = Icons.Outlined.Hub,
-            ),
-        ),
-    )
+private fun WorkflowsFoundationScreen(
+    state: WorkflowUiState,
+    onCreate: (String, String, String) -> Unit,
+    onStart: (String) -> Unit,
+    onDelete: (String) -> Unit,
+    onSelect: (String?) -> Unit,
+    onProvideApproval: (String, Boolean) -> Unit,
+) {
+    if (state.selectedWorkflowId != null) {
+        val selectedWorkflow = state.definitions.find { it.id == state.selectedWorkflowId }
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { onSelect(null) }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                    }
+                    Text(
+                        selectedWorkflow?.name ?: "Workflow",
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+                }
+            }
+
+            item {
+                LibrarySection(
+                    title = "Runs",
+                    body = "Execution history of this workflow.",
+                    actionLabel = "Start New Run",
+                    onAction = { onStart(state.selectedWorkflowId!!) },
+                    isEmpty = state.runs.isEmpty(),
+                    emptyTitle = "No runs yet",
+                ) {
+                    state.runs.forEach { run ->
+                        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AssetRow(
+                                title = "Run ${run.startedAtMillis}",
+                                body = "Status: ${run.status} • Progress: ${(run.progress * 100).toInt()}%",
+                                onDelete = { /* TODO */ }
+                            )
+                            
+                            if (run.status == "Awaiting Approval") {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text("Approval Required", style = MaterialTheme.typography.titleSmall)
+                                        Text("Tool: ${run.pendingApprovalToolName}", style = MaterialTheme.typography.bodySmall)
+                                        Text("Arguments: ${run.pendingApprovalArguments}", style = MaterialTheme.typography.bodySmall, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                            TextButton(onClick = { onProvideApproval(run.id, false) }) { Text("Deny") }
+                                            Button(onClick = { onProvideApproval(run.id, true) }) { Text("Approve") }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            item {
+                Header(
+                    title = "Autonomous workflows",
+                    summary = "Define goals for your agents and let them work in the background. Monitor progress, review results, and handle approval gates.",
+                )
+            }
+            
+            item {
+                LibrarySection(
+                    title = "My Workflows",
+                    body = "Active background tasks and scheduled routines.",
+                    actionLabel = "New Workflow",
+                    onAction = { onCreate("Research Task", "Research the latest news on AI", "agent-1") },
+                    isEmpty = state.definitions.isEmpty(),
+                    emptyTitle = "No workflows",
+                ) {
+                    state.definitions.forEach { workflow ->
+                        AssetRow(
+                            title = workflow.name,
+                            body = workflow.goal,
+                            onDelete = { onDelete(workflow.id) },
+                            onClick = { onSelect(workflow.id) }
+                        )
+                    }
+                }
+            }
+
+            item {
+                FoundationCard(
+                    item = FoundationItem(
+                        title = "Background Execution",
+                        body = "Workflows run reliably in the background using Android WorkManager.",
+                        icon = Icons.Outlined.Route
+                    )
+                )
+            }
+        }
+    }
 }
 
 @Composable
-private fun KnowledgeFoundationScreen() {
-    FoundationScreen(
-        title = "Private knowledge",
-        summary = "Local RAG will import documents, extract text, chunk content, retrieve locally, and show citations.",
-        chips = listOf("Local RAG", "Documents", "Embeddings", "Citations"),
-        items = listOf(
-            FoundationItem(
-                title = "Collections",
-                body = "Users will manage searchable knowledge collections with indexing status and storage details.",
-                icon = Icons.Outlined.Route,
-            ),
-            FoundationItem(
-                title = "Citations",
-                body = "Agent answers using RAG must expose source snippets and retrieval decisions in debug traces.",
-                icon = Icons.Outlined.AutoAwesome,
-            ),
-        ),
-    )
+private fun KnowledgeFoundationScreen(
+    state: KnowledgeUiState,
+    onCreate: (String, String) -> Unit,
+    onDelete: (String) -> Unit,
+    onSelect: (String?) -> Unit,
+    onImport: (String, String, InputStream) -> Unit,
+    onDeleteDocument: (String) -> Unit,
+    onSearchQueryChanged: (String) -> Unit,
+) {
+    val context = LocalContext.current
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        uri?.let {
+            val title = it.path?.substringAfterLast('/') ?: "New Document"
+            context.contentResolver.openInputStream(it)?.let { stream ->
+                onImport(title, it.toString(), stream)
+            }
+        }
+    }
+
+    if (state.selectedCollectionId != null) {
+        val selectedCollection = state.collections.find { it.id == state.selectedCollectionId }
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { onSelect(null) }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                    }
+                    Text(
+                        selectedCollection?.name ?: "Collection",
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+                }
+            }
+
+            item {
+                OutlinedTextField(
+                    value = state.searchQuery,
+                    onValueChange = onSearchQueryChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Search this collection") },
+                    placeholder = { Text("Ask a question about your documents...") },
+                    leadingIcon = { Icon(Icons.Default.Search, null) }
+                )
+            }
+
+            if (state.searchResults.isNotEmpty()) {
+                item {
+                    Text("Search Results", style = MaterialTheme.typography.titleMedium)
+                }
+                items(state.searchResults) { result ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "Score: ${(result.score * 100).toInt()}%",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                            Text(
+                                text = result.chunk.content,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                LibrarySection(
+                    title = "Documents",
+                    body = "Documents in this collection.",
+                    actionLabel = "Import File",
+                    onAction = { filePickerLauncher.launch(arrayOf("text/plain", "text/markdown")) },
+                    isEmpty = state.documents.isEmpty(),
+                    emptyTitle = "No documents",
+                ) {
+                    state.documents.forEach { doc ->
+                        AssetRow(
+                            title = doc.title,
+                            body = "Status: ${doc.status}",
+                            onDelete = { onDeleteDocument(doc.id) }
+                        )
+                    }
+                }
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            item {
+                Header(
+                    title = "Private knowledge",
+                    summary = "Local RAG allows you to import documents and search them privately on-device. Collections are indexed and stored only on your phone.",
+                )
+            }
+            
+            item {
+                LibrarySection(
+                    title = "Collections",
+                    body = "Searchable groups of documents.",
+                    actionLabel = "New Collection",
+                    onAction = { onCreate("My Documents", "Private research and notes") },
+                    isEmpty = state.collections.isEmpty(),
+                    emptyTitle = "No collections",
+                ) {
+                    state.collections.forEach { collection ->
+                        AssetRow(
+                            title = collection.name,
+                            body = collection.description,
+                            onDelete = { onDelete(collection.id) },
+                            onClick = { onSelect(collection.id) }
+                        )
+                    }
+                }
+            }
+
+            item {
+                FoundationCard(
+                    item = FoundationItem(
+                        title = "Document Extraction",
+                        body = "Support for PDF, Markdown, and Text files is coming soon.",
+                        icon = Icons.Outlined.Route
+                    )
+                )
+            }
+        }
+    }
 }
 
 @Composable
-private fun ModelsFoundationScreen() {
-    FoundationScreen(
-        title = "Models and providers",
-        summary = "Cloud keys, local model files, routing rules, capability badges, benchmarks, and budgets will live here.",
-        chips = listOf("BYOK", "MediaPipe", "llama.cpp", "Budgets"),
-        items = listOf(
-            FoundationItem(
-                title = "Provider adapters",
-                body = "OpenAI, Anthropic, Gemini, and Mistral stream through one normalized generation event model.",
-                icon = Icons.Outlined.Route,
-            ),
-            FoundationItem(
-                title = "Local engines",
-                body = "MediaPipe/LiteRT and llama.cpp adapters share a single local model engine contract.",
-                icon = Icons.Outlined.Hub,
-            ),
-        ),
-    )
+private fun ModelsFoundationScreen(
+    state: LocalModelManagerState,
+    onRegisterMock: () -> Unit,
+    onLoad: (String) -> Unit,
+    onUnload: () -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item {
+            Header(
+                title = "Models and providers",
+                summary = "Manage cloud API keys and on-device local models. Use 'Local-only' mode in settings to force private inference.",
+            )
+        }
+        
+        item {
+            LibrarySection(
+                title = "Local Models",
+                body = "On-device LLMs for private, offline inference.",
+                actionLabel = "Add Mock Model",
+                onAction = onRegisterMock,
+                isEmpty = state.models.isEmpty(),
+                emptyTitle = "No local models",
+            ) {
+                state.models.forEach { model ->
+                    val isActive = model.id == state.activeModelId
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(model.displayName, style = MaterialTheme.typography.titleMedium)
+                                Text("${model.engine} • ${(model.sizeBytes / 1_000_000)} MB", style = MaterialTheme.typography.bodySmall)
+                                Text("Status: ${model.status}", style = MaterialTheme.typography.labelSmall)
+                            }
+                            if (isActive) {
+                                Button(onClick = onUnload) { Text("Unload") }
+                            } else {
+                                OutlinedButton(onClick = { onLoad(model.id) }) { Text("Load") }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            FoundationCard(
+                item = FoundationItem(
+                    title = "Cloud Providers",
+                    body = "OpenAI, Anthropic, Gemini, and Mistral adapters are ready. API key management is coming soon.",
+                    icon = Icons.Outlined.Route
+                )
+            )
+        }
+    }
 }
 
 @Composable
-private fun DebugFoundationScreen() {
-    FoundationScreen(
-        title = "Inspectable runs",
-        summary = "The debug console will make prompts, routing, tools, memory, RAG, voice, cost, and errors visible.",
-        chips = listOf("Prompt", "Tools", "Memory", "RAG", "Voice", "Cost"),
-        items = listOf(
-            FoundationItem(
-                title = "Trace-first runtime",
-                body = "Agent runs should record enough context to understand behavior without storing secrets or raw audio.",
-                icon = Icons.Outlined.Route,
-            ),
-            FoundationItem(
-                title = "Replay path",
-                body = "Eligible runs can later be replayed with the same inputs and selected model.",
-                icon = Icons.Outlined.AutoAwesome,
-            ),
-        ),
-    )
+private fun DebugFoundationScreen(
+    state: DebugUiState,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item {
+            Header(
+                title = "Debug console",
+                summary = "Inspect every agent interaction, including prompts, tool calls, and usage metrics.",
+            )
+        }
+
+        item {
+            LibrarySection(
+                title = "Recent Traces",
+                body = "Logs of recent generations.",
+                actionLabel = "Clear All",
+                onAction = { /* TODO */ },
+                isEmpty = state.recentTraces.isEmpty(),
+                emptyTitle = "No traces recorded",
+            ) {
+                state.recentTraces.forEach { trace ->
+                    AssetRow(
+                        title = "Trace ${trace.createdAtMillis}",
+                        body = "Model: ${trace.modelId} • Prompt: ${trace.promptPreview}",
+                        onDelete = { /* TODO */ }
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -320,97 +702,126 @@ private fun SettingsFoundationScreen(
     ) {
         item {
             Header(
-                title = "Settings foundation",
-                summary = "Theme, dynamic color, privacy, cost, voice, retention, and safety controls will be managed from this screen.",
+                title = "App settings",
+                summary = "Control your privacy, budget, routing, and voice experience. These settings are stored locally on your device.",
             )
         }
+
         item {
-            SettingRow(
-                title = "Dynamic color",
-                body = "Use Android system colors when available. Explicit Lagents light and dark schemes remain the default.",
-                checked = settings.dynamicColorEnabled,
-                onCheckedChange = onDynamicColorChanged,
+            Text(
+                "Privacy",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
+
         item {
             SettingRow(
                 title = "Local-only mode",
-                body = "Block cloud calls, cloud fallback, and web tools when strict privacy is needed.",
+                summary = "Block all cloud provider calls and force on-device inference.",
                 checked = settings.privacyMode == PrivacyMode.LocalOnly,
-                onCheckedChange = onLocalOnlyModeChanged,
+                onCheckedChange = { onLocalOnlyModeChanged(it) }
             )
         }
+
         item {
             SettingRow(
                 title = "Sensitive text redaction",
-                body = "Run a redaction pass before cloud calls where feasible and record the decision in debug traces.",
+                summary = "Attempt to remove PII from prompts before sending to cloud providers.",
                 checked = settings.sensitiveTextRedactionEnabled,
-                onCheckedChange = onSensitiveTextRedactionChanged,
+                onCheckedChange = onSensitiveTextRedactionChanged
             )
         }
+
         item {
             SettingRow(
-                title = "Confirm side effects",
-                body = "Require explicit approval before tools perform external actions or modify app data.",
+                title = "Require tool approval",
+                summary = "Pause and ask for confirmation before executing side-effectful tools.",
                 checked = settings.requireApprovalForSideEffects,
-                onCheckedChange = onRequireApprovalForSideEffectsChanged,
+                onCheckedChange = onRequireApprovalForSideEffectsChanged
             )
         }
+
+        item {
+            Text(
+                "Model Routing",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+
         item {
             ChoiceRow(
                 title = "Routing preference",
-                body = "Default model selection strategy for agents that do not override routing.",
+                summary = "Choose how the app selects between available models.",
                 value = settings.routingPreference.displayName,
-                onCycle = onCycleRoutingPreference,
+                onCycle = onCycleRoutingPreference
             )
         }
+
         item {
             SettingRow(
                 title = "Budget warnings",
-                body = "Warn before expensive models, large contexts, or cloud fallback. Current monthly budget: ${settings.monthlyBudgetCents.toCurrencyLabel()}.",
+                summary = "Show alerts before using expensive cloud models.",
                 checked = settings.budgetWarningsEnabled,
-                onCheckedChange = onBudgetWarningsChanged,
+                onCheckedChange = onBudgetWarningsChanged
             )
         }
+
+        item {
+            Text(
+                "Voice & Speech",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+
         item {
             ChoiceRow(
-                title = "Voice input",
-                body = "Default microphone behavior for chat composition.",
+                title = "Voice input mode",
+                summary = "Control how speech is captured and processed.",
                 value = settings.voiceInputMode.displayName,
-                onCycle = onCycleVoiceInputMode,
+                onCycle = onCycleVoiceInputMode
             )
         }
+
         item {
             SettingRow(
                 title = "Auto-read responses",
-                body = "Read assistant messages aloud automatically when the active agent allows it.",
+                summary = "Automatically read assistant responses using Text-to-Speech.",
                 checked = settings.autoReadAssistantResponses,
-                onCheckedChange = onAutoReadAssistantResponsesChanged,
+                onCheckedChange = onAutoReadAssistantResponsesChanged
             )
         }
+
         item {
             ChoiceRow(
                 title = "Transcript retention",
-                body = "Controls whether speech transcript text is discarded or retained with conversations.",
+                summary = "Control how long voice transcripts are stored.",
                 value = settings.transcriptRetention.displayName,
-                onCycle = onCycleTranscriptRetention,
+                onCycle = onCycleTranscriptRetention
             )
         }
-        items(
-            listOf(
-                FoundationItem(
-                    title = "Privacy controls",
-                    body = "Local-only mode, redaction, permissions, and retention controls are planned for this area.",
-                    icon = Icons.Outlined.Mic,
-                ),
-                FoundationItem(
-                    title = "Voice profiles",
-                    body = "Language, voice, speech rate, pitch, transcript retention, and playback behavior will be configurable.",
-                    icon = Icons.AutoMirrored.Outlined.VolumeUp,
-                ),
-            ),
-        ) { item ->
-            FoundationCard(item = item)
+
+        item {
+            Text(
+                "Appearance",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+
+        item {
+            SettingRow(
+                title = "Dynamic color",
+                summary = "Use colors derived from your wallpaper (Android 12+).",
+                checked = settings.dynamicColorEnabled,
+                onCheckedChange = onDynamicColorChanged
+            )
         }
     }
 }
@@ -430,26 +841,23 @@ private fun FoundationScreen(
         item {
             Header(title = title, summary = summary)
         }
+
         item {
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 chips.forEach { chip ->
-                    AssistChip(
-                        onClick = {},
-                        label = { Text(text = chip) },
+                    SuggestionChip(
+                        onClick = { },
+                        label = { Text(chip) }
                     )
                 }
             }
         }
+
         items(items) { item ->
             FoundationCard(item = item)
-        }
-        item {
-            OutlinedButton(onClick = {}) {
-                Text(text = "Implementation task list")
-            }
         }
     }
 }
@@ -457,7 +865,7 @@ private fun FoundationScreen(
 @Composable
 private fun ChoiceRow(
     title: String,
-    body: String,
+    summary: String,
     value: String,
     onCycle: () -> Unit,
 ) {
@@ -470,29 +878,28 @@ private fun ChoiceRow(
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
+                .clickable(onClick = onCycle)
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = body,
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = summary,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            OutlinedButton(onClick = onCycle) {
-                Text(text = value)
-            }
+            Text(
+                text = value,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 16.dp)
+            )
         }
     }
 }
@@ -502,11 +909,16 @@ private fun Header(
     title: String,
     summary: String,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+    ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
             text = summary,
@@ -526,22 +938,21 @@ private fun FoundationCard(item: FoundationItem) {
         ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.Top,
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = item.icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
             )
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = item.body,
@@ -556,7 +967,7 @@ private fun FoundationCard(item: FoundationItem) {
 @Composable
 private fun SettingRow(
     title: String,
-    body: String,
+    summary: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
@@ -569,46 +980,28 @@ private fun SettingRow(
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
+                .clickable { onCheckedChange(!checked) }
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = body,
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = summary,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Switch(
                 checked = checked,
-                onCheckedChange = onCheckedChange,
+                onCheckedChange = onCheckedChange
             )
         }
     }
-}
-
-@Composable
-private fun AssetCountChip(
-    label: String,
-    count: Int,
-) {
-    FilterChip(
-        selected = count > 0,
-        onClick = {},
-        label = {
-            Text(text = "$label $count")
-        },
-    )
 }
 
 @Composable
@@ -619,54 +1012,31 @@ private fun LibrarySection(
     onAction: () -> Unit,
     isEmpty: Boolean,
     emptyTitle: String,
-    emptyBody: String,
     content: @Composable () -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = body,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                OutlinedButton(onClick = onAction) {
-                    Text(text = actionLabel)
-                }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (isEmpty) {
-                LagentsEmptyState(
-                    title = emptyTitle,
-                    body = emptyBody,
-                    actionLabel = actionLabel,
-                    onAction = onAction,
-                )
-            } else {
+            TextButton(onClick = onAction) {
+                Text(actionLabel)
+            }
+        }
+
+        if (isEmpty) {
+            LagentsEmptyState(
+                title = emptyTitle,
+                body = body, // Using the section body as description for simplicity
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 content()
             }
         }
@@ -677,41 +1047,83 @@ private fun LibrarySection(
 private fun AssetRow(
     title: String,
     body: String,
+    onArchive: (() -> Unit)? = null,
+    onDuplicate: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
+    onEdit: (() -> Unit)? = null,
+    onClick: (() -> Unit)? = null,
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         shape = MaterialTheme.shapes.small,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = body,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            
+            Box {
+                IconButton(
+                    onClick = { showMenu = true },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(Icons.Outlined.MoreVert, contentDescription = "Asset options")
+                }
+                
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    if (onEdit != null) {
+                        DropdownMenuItem(
+                            text = { Text("Edit") },
+                            onClick = { onEdit(); showMenu = false },
+                            leadingIcon = { Icon(Icons.Outlined.Edit, null) }
+                        )
+                    }
+                    if (onDuplicate != null) {
+                        DropdownMenuItem(
+                            text = { Text("Duplicate") },
+                            onClick = { onDuplicate(); showMenu = false },
+                            leadingIcon = { Icon(Icons.Outlined.ContentCopy, null) }
+                        )
+                    }
+                    if (onArchive != null) {
+                        DropdownMenuItem(
+                            text = { Text("Archive") },
+                            onClick = { onArchive(); showMenu = false },
+                            leadingIcon = { Icon(Icons.Outlined.Archive, null) }
+                        )
+                    }
+                    if (onDelete != null) {
+                        DropdownMenuItem(
+                            text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                            onClick = { onDelete(); showMenu = false },
+                            leadingIcon = { Icon(Icons.Outlined.Delete, null, tint = MaterialTheme.colorScheme.error) }
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
-private data class FoundationItem(
+data class FoundationItem(
     val title: String,
     val body: String,
     val icon: ImageVector,
 )
 
 private val Enum<*>.displayName: String
-    get() = name.replace(Regex("([a-z])([A-Z])"), "$1 $2")
-
-private fun Int.toCurrencyLabel(): String = "$" + (this / 100)
+    get() = name.lowercase().replaceFirstChar { it.uppercase() }

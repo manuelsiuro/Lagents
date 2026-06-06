@@ -153,6 +153,137 @@ class LibraryRepository(
             ),
         )
     }
+
+    // Agent CRUD
+    suspend fun updateAgent(agent: AgentEntity) {
+        agentDao.upsertAgent(agent.copy(updatedAtMillis = nowMillis()))
+    }
+
+    suspend fun archiveAgent(id: String) {
+        agentDao.archiveAgent(id, nowMillis())
+    }
+
+    suspend fun restoreAgent(id: String) {
+        agentDao.restoreAgent(id, nowMillis())
+    }
+
+    suspend fun deleteAgent(id: String) {
+        agentDao.deleteAgent(id)
+    }
+
+    suspend fun duplicateAgent(agent: AgentEntity) {
+        val now = nowMillis()
+        agentDao.upsertAgent(
+            agent.copy(
+                id = idGenerator(),
+                name = "${agent.name} (Copy)",
+                createdAtMillis = now,
+                updatedAtMillis = now,
+                archivedAtMillis = null,
+            ),
+        )
+    }
+
+    // Prompt CRUD
+    suspend fun updatePrompt(prompt: PromptEntity) {
+        promptDao.upsertPrompt(prompt.copy(updatedAtMillis = nowMillis()))
+    }
+
+    suspend fun archivePrompt(id: String) {
+        promptDao.archivePrompt(id, nowMillis())
+    }
+
+    suspend fun restorePrompt(id: String) {
+        promptDao.restorePrompt(id, nowMillis())
+    }
+
+    suspend fun deletePrompt(id: String) {
+        promptDao.deletePromptWithVersions(id)
+    }
+
+    suspend fun duplicatePrompt(prompt: PromptEntity) {
+        val now = nowMillis()
+        val newId = idGenerator()
+        promptDao.upsertPromptWithVersion(
+            prompt = prompt.copy(
+                id = newId,
+                title = "${prompt.title} (Copy)",
+                createdAtMillis = now,
+                updatedAtMillis = now,
+                archivedAtMillis = null,
+            ),
+            version = PromptVersionEntity(
+                promptId = newId,
+                version = 1,
+                title = prompt.title,
+                description = prompt.description,
+                tagsJson = prompt.tagsJson,
+                variableNamesJson = prompt.variableNamesJson,
+                systemText = prompt.systemText,
+                userText = prompt.userText,
+                createdAtMillis = now,
+            ),
+        )
+    }
+
+    // Skill CRUD
+    suspend fun updateSkill(skill: SkillEntity) {
+        skillDao.upsertSkill(skill.copy(updatedAtMillis = nowMillis()))
+    }
+
+    suspend fun archiveSkill(id: String) {
+        skillDao.archiveSkill(id, nowMillis())
+    }
+
+    suspend fun restoreSkill(id: String) {
+        skillDao.restoreSkill(id, nowMillis())
+    }
+
+    suspend fun deleteSkill(id: String) {
+        skillDao.deleteSkillWithVersions(id)
+    }
+
+    suspend fun duplicateSkill(skill: SkillEntity) {
+        val now = nowMillis()
+        val newId = idGenerator()
+        skillDao.upsertSkillWithVersion(
+            skill = skill.copy(
+                id = newId,
+                title = "${skill.title} (Copy)",
+                createdAtMillis = now,
+                updatedAtMillis = now,
+                archivedAtMillis = null,
+            ),
+            version = SkillVersionEntity(
+                skillId = newId,
+                version = 1,
+                title = skill.title,
+                description = skill.description,
+                instructions = skill.instructions,
+                requiredPromptIdsJson = skill.requiredPromptIdsJson,
+                enabledToolIdsJson = skill.enabledToolIdsJson,
+                requiredInputsJson = skill.requiredInputsJson,
+                outputFormatJson = skill.outputFormatJson,
+                modelRequirementsJson = skill.modelRequirementsJson,
+                memoryPolicyJson = skill.memoryPolicyJson,
+                safetyPolicyJson = skill.safetyPolicyJson,
+                createdAtMillis = now,
+            ),
+        )
+    }
+
+    // Tool Config CRUD
+    suspend fun updateToolConfig(toolConfig: ToolConfigEntity) {
+        toolConfigDao.upsertToolConfig(toolConfig.copy(updatedAtMillis = nowMillis()))
+    }
+
+    suspend fun deleteToolConfig(toolKey: String) {
+        toolConfigDao.deleteToolConfig(toolKey)
+    }
+
+    suspend fun setToolEnabled(toolKey: String, enabled: Boolean) {
+        toolConfigDao.setToolEnabled(toolKey, enabled, nowMillis())
+    }
 }
 
 data class LibraryOverview(

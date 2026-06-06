@@ -9,7 +9,10 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.CompositionLocalProvider
 import com.msa.lagents.data.settings.ThemePreference
+import com.msa.lagents.ui.theme.core.LocalDimensions
+import com.msa.lagents.ui.theme.core.LagentsDimensions
 
 private val DarkColorScheme = darkColorScheme(
     primary = LagoonBlueLight,
@@ -61,14 +64,17 @@ fun LagentsTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(
+        LocalDimensions provides LagentsDimensions()
+    ) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }

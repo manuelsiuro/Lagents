@@ -10,6 +10,15 @@ import com.msa.lagents.data.local.conversation.ConversationEntity
 import com.msa.lagents.data.local.conversation.MessageEntity
 import com.msa.lagents.data.local.debug.DebugTraceDao
 import com.msa.lagents.data.local.debug.DebugTraceEntity
+import com.msa.lagents.data.local.knowledge.KnowledgeChunkEntity
+import com.msa.lagents.data.local.knowledge.KnowledgeCollectionEntity
+import com.msa.lagents.data.local.knowledge.KnowledgeDao
+import com.msa.lagents.data.local.knowledge.KnowledgeDocumentEntity
+import com.msa.lagents.data.local.voice.VoiceDao
+import com.msa.lagents.data.local.voice.VoiceProfileEntity
+import com.msa.lagents.data.local.workflow.WorkflowDao
+import com.msa.lagents.data.local.workflow.WorkflowDefinitionEntity
+import com.msa.lagents.data.local.workflow.WorkflowRunEntity
 import com.msa.lagents.data.local.memory.MemoryDao
 import com.msa.lagents.data.local.memory.MemoryEntity
 import com.msa.lagents.data.local.prompt.PromptDao
@@ -36,11 +45,21 @@ import com.msa.lagents.data.local.tool.ToolConfigEntity
         ProviderConfigEntity::class,
         MemoryEntity::class,
         DebugTraceEntity::class,
+        KnowledgeCollectionEntity::class,
+        KnowledgeDocumentEntity::class,
+        KnowledgeChunkEntity::class,
+        WorkflowDefinitionEntity::class,
+        WorkflowRunEntity::class,
+        VoiceProfileEntity::class,
     ],
-    version = 2,
+    version = 6,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
+        AutoMigration(from = 2, to = 3),
+        AutoMigration(from = 3, to = 4),
+        AutoMigration(from = 4, to = 5),
+        AutoMigration(from = 5, to = 6),
     ],
 )
 abstract class LagentsDatabase : RoomDatabase() {
@@ -52,4 +71,7 @@ abstract class LagentsDatabase : RoomDatabase() {
     abstract fun providerConfigDao(): ProviderConfigDao
     abstract fun memoryDao(): MemoryDao
     abstract fun debugTraceDao(): DebugTraceDao
+    abstract fun knowledgeDao(): KnowledgeDao
+    abstract fun workflowDao(): WorkflowDao
+    abstract fun voiceDao(): VoiceDao
 }
