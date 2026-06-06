@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -53,6 +54,7 @@ import com.msa.lagents.data.local.tool.ToolConfigEntity
 import com.msa.lagents.data.settings.AppSettings
 import com.msa.lagents.data.settings.PrivacyMode
 import com.msa.lagents.data.settings.ThemePreference
+import com.msa.lagents.domain.local.LocalModelStatus
 import com.msa.lagents.ui.chat.ChatScreen
 import com.msa.lagents.ui.chat.ChatUiState
 import com.msa.lagents.ui.components.LagentsEmptyState
@@ -109,6 +111,8 @@ fun DestinationScreen(
     onRegisterMockModel: () -> Unit,
     onLoadLocalModel: (String) -> Unit,
     onUnloadLocalModel: () -> Unit,
+    onDownloadLocalModel: (String) -> Unit,
+    onDeleteLocalModel: (String) -> Unit,
     onAddProvider: (String, String, String, String?) -> Unit,
     onDeleteProvider: (String) -> Unit,
     knowledgeState: KnowledgeUiState,
@@ -189,6 +193,8 @@ fun DestinationScreen(
             onRegisterMockLocal = onRegisterMockModel,
             onLoadLocal = onLoadLocalModel,
             onUnloadLocal = onUnloadLocalModel,
+            onDownloadLocal = onDownloadLocalModel,
+            onDeleteLocal = onDeleteLocalModel,
             onAddProvider = onAddProvider,
             onDeleteProvider = onDeleteProvider,
         )
@@ -543,7 +549,7 @@ private fun KnowledgeFoundationScreen(
                     title = "Documents",
                     body = "Documents in this collection.",
                     actionLabel = "Import File",
-                    onAction = { filePickerLauncher.launch(arrayOf("text/plain", "text/markdown")) },
+                    onAction = { filePickerLauncher.launch(arrayOf("text/plain", "text/markdown", "application/pdf")) },
                     isEmpty = state.documents.isEmpty(),
                     emptyTitle = "No documents",
                 ) {
@@ -594,7 +600,7 @@ private fun KnowledgeFoundationScreen(
                 FoundationCard(
                     item = FoundationItem(
                         title = "Document Extraction",
-                        body = "Support for PDF, Markdown, and Text files is coming soon.",
+                        body = "Support for PDF, Markdown, and Text files.",
                         icon = Icons.Outlined.Route
                     )
                 )
@@ -609,6 +615,8 @@ private fun ModelsFoundationScreen(
     onRegisterMockLocal: () -> Unit,
     onLoadLocal: (String) -> Unit,
     onUnloadLocal: () -> Unit,
+    onDownloadLocal: (String) -> Unit,
+    onDeleteLocal: (String) -> Unit,
     onAddProvider: (String, String, String, String?) -> Unit,
     onDeleteProvider: (String) -> Unit,
 ) {
@@ -657,9 +665,9 @@ private fun ModelsFoundationScreen(
 
         item {
             LibrarySection(
-                title = "Local Models",
+                title = "Local Model Store",
                 body = "On-device LLMs for private, offline inference.",
-                actionLabel = "Add Mock",
+                actionLabel = "Refresh List",
                 onAction = onRegisterMockLocal,
                 isEmpty = state.localModels.isEmpty(),
                 emptyTitle = "No local models",
@@ -672,18 +680,44 @@ private fun ModelsFoundationScreen(
                             containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
                         )
                     ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(model.displayName, style = MaterialTheme.typography.titleMedium)
-                                Text("${model.engine} • ${(model.sizeBytes / 1_000_000)} MB", style = MaterialTheme.typography.bodySmall)
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(model.displayName, style = MaterialTheme.typography.titleMedium)
+                                    Text("${model.engine} • ${(model.sizeBytes / 1_000_000)} MB", style = MaterialTheme.typography.bodySmall)
+                                }
+                                
+                                when {
+                                    isActive -> {
+                                        Button(onClick = onUnloadLocal) { Text("Unload") }
+                                    }
+                                    model.status == LocalModelStatus.Ready -> {
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            IconButton(onClick = { onDeleteLocal(model.id) }) {
+                                                Icon(Icons.Outlined.Delete, "Delete")
+                                            }
+                                            OutlinedButton(onClick = { onLoadLocal(model.id) }) { Text("Load") }
+                                        }
+                                    }
+                                    model.status == LocalModelStatus.Downloading -> {
+                                        CircularProgressIndicator(
+                                            progress = { model.downloadProgress ?: 0f },
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                    else -> {
+                                        IconButton(onClick = { onDownloadLocal(model.id) }) {
+                                            Icon(Icons.Default.CloudDownload, "Download")
+                                        }
+                                    }
+                                }
                             }
-                            if (isActive) {
-                                Button(onClick = onUnloadLocal) { Text("Unload") }
-                            } else {
-                                OutlinedButton(onClick = { onLoadLocal(model.id) }) { Text("Load") }
+                            
+                            if (model.status == LocalModelStatus.Downloading) {
+                                LinearProgressIndicator(
+                                    progress = { model.downloadProgress ?: 0f },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
                             }
                         }
                     }

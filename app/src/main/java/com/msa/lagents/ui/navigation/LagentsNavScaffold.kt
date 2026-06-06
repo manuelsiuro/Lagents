@@ -84,6 +84,8 @@ fun LagentsNavScaffold(
     onRegisterMockModel: () -> Unit,
     onLoadLocalModel: (String) -> Unit,
     onUnloadLocalModel: () -> Unit,
+    onDownloadLocalModel: (String) -> Unit,
+    onDeleteLocalModel: (String) -> Unit,
     onAddProvider: (String, String, String, String?) -> Unit,
     onDeleteProvider: (String) -> Unit,
     onCreateKnowledgeCollection: (String, String) -> Unit,
@@ -102,7 +104,7 @@ fun LagentsNavScaffold(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    val selectedDestination = topLevelDestinationsList.find { destination ->
+    val selectedDestination = LagentsTopLevelDestinations.find { destination ->
         currentDestination?.hierarchy?.any { it.route == destination.route } == true
     } ?: LagentsDestination.Chat
 
@@ -176,6 +178,8 @@ fun LagentsNavScaffold(
                     onRegisterMockModel = onRegisterMockModel,
                     onLoadLocalModel = onLoadLocalModel,
                     onUnloadLocalModel = onUnloadLocalModel,
+                    onDownloadLocalModel = onDownloadLocalModel,
+                    onDeleteLocalModel = onDeleteLocalModel,
                     onAddProvider = onAddProvider,
                     onDeleteProvider = onDeleteProvider,
                     onCreateKnowledgeCollection = onCreateKnowledgeCollection,
@@ -260,6 +264,8 @@ fun LagentsNavScaffold(
                 onRegisterMockModel = onRegisterMockModel,
                 onLoadLocalModel = onLoadLocalModel,
                 onUnloadLocalModel = onUnloadLocalModel,
+                onDownloadLocalModel = onDownloadLocalModel,
+                onDeleteLocalModel = onDeleteLocalModel,
                 onAddProvider = onAddProvider,
                 onDeleteProvider = onDeleteProvider,
                 onCreateKnowledgeCollection = onCreateKnowledgeCollection,
@@ -331,6 +337,8 @@ private fun LagentsNavHost(
     onRegisterMockModel: () -> Unit,
     onLoadLocalModel: (String) -> Unit,
     onUnloadLocalModel: () -> Unit,
+    onDownloadLocalModel: (String) -> Unit,
+    onDeleteLocalModel: (String) -> Unit,
     onAddProvider: (String, String, String, String?) -> Unit,
     onDeleteProvider: (String) -> Unit,
     onCreateKnowledgeCollection: (String, String) -> Unit,
@@ -350,7 +358,7 @@ private fun LagentsNavHost(
             navController = navController,
             startDestination = LagentsDestination.Chat.route,
         ) {
-            topLevelDestinationsList.forEach { destination ->
+            LagentsTopLevelDestinations.forEach { destination ->
                 composable(destination.route) {
                     DestinationScreen(
                         destination = destination,
@@ -396,6 +404,8 @@ private fun LagentsNavHost(
                         onRegisterMockModel = onRegisterMockModel,
                         onLoadLocalModel = onLoadLocalModel,
                         onUnloadLocalModel = onUnloadLocalModel,
+                        onDownloadLocalModel = onDownloadLocalModel,
+                        onDeleteLocalModel = onDeleteLocalModel,
                         onAddProvider = onAddProvider,
                         onDeleteProvider = onDeleteProvider,
                         knowledgeState = knowledgeState,
@@ -466,7 +476,7 @@ private fun LagentsNavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp,
     ) {
-        topLevelDestinationsList.forEach { destination ->
+        LagentsTopLevelDestinations.forEach { destination ->
             NavigationBarItem(
                 selected = selectedDestination == destination,
                 onClick = { onNavigate(destination) },
@@ -502,7 +512,7 @@ private fun LagentsNavigationRail(
             )
         }
     ) {
-        topLevelDestinationsList.forEach { destination ->
+        LagentsTopLevelDestinations.forEach { destination ->
             NavigationRailItem(
                 selected = selectedDestination == destination,
                 onClick = { onNavigate(destination) },
@@ -532,13 +542,3 @@ private fun NavHostController.navigateTopLevel(destination: LagentsDestination) 
         restoreState = true
     }
 }
-
-private val topLevelDestinationsList = listOf(
-    LagentsDestination.Chat,
-    LagentsDestination.Library,
-    LagentsDestination.Workflows,
-    LagentsDestination.Knowledge,
-    LagentsDestination.Models,
-    LagentsDestination.Debug,
-    LagentsDestination.Settings,
-)

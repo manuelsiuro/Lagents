@@ -80,6 +80,14 @@ class ModelsViewModel(
         }
     }
 
+    fun downloadLocalModel(id: String) {
+        localModelManager.downloadModel(id)
+    }
+
+    fun deleteLocalModel(id: String) {
+        localModelManager.deleteModel(id)
+    }
+
     class Factory(
         private val localModelManager: LocalModelManager,
         private val providerRepository: ProviderRepository,

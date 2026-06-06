@@ -1,50 +1,137 @@
 package com.msa.lagents.data.local.manager
 
+import android.content.Context
 import com.msa.lagents.domain.local.LocalModelDescriptor
 import com.msa.lagents.domain.local.LocalModelEngine
+import com.msa.lagents.domain.local.LocalModelEngineType
 import com.msa.lagents.domain.local.LocalModelStatus
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import java.io.File
 
 class LocalModelManager(
+    private val context: Context,
     private val engine: LocalModelEngine,
+    private val downloader: LocalModelDownloader
 ) {
-    private val _models = MutableStateFlow<List<LocalModelDescriptor>>(emptyList())
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private val curatedModels = listOf(
+        LocalModelDescriptor(
+            id = "gemma-2b-it-cpu",
+            path = "",
+            engine = LocalModelEngineType.MediaPipe,
+            displayName = "Gemma 2B IT (CPU)",
+            sizeBytes = 1_350_000_000,
+            contextWindowTokens = 2048,
+            downloadUrl = "https://huggingface.co/google/gemma-2b-it-tflite/resolve/main/gemma-2b-it-cpu-int4.bin"
+        ),
+        LocalModelDescriptor(
+            id = "gemma-2b-it-gpu",
+            path = "",
+            engine = LocalModelEngineType.MediaPipe,
+            displayName = "Gemma 2B IT (GPU)",
+            sizeBytes = 1_350_000_000,
+            contextWindowTokens = 2048,
+            downloadUrl = "https://huggingface.co/google/gemma-2b-it-tflite/resolve/main/gemma-2b-it-gpu-int4.bin"
+        )
+    )
+
+    private val _models = MutableStateFlow<List<LocalModelDescriptor>>(curatedModels)
     val models: StateFlow<List<LocalModelDescriptor>> = _models.asStateFlow()
 
     private val _activeModelId = MutableStateFlow<String?>(null)
     val activeModelId: StateFlow<String?> = _activeModelId.asStateFlow()
 
-    suspend fun registerModel(model: LocalModelDescriptor) {
-        _models.value = _models.value + model
+    init {
+        refreshModelStatus()
     }
 
-    suspend fun loadModel(id: String) {
-        val model = _models.value.find { it.id == id } ?: return
+    private fun refreshModelStatus() {
+        val updatedModels = _models.value.map { model ->
+            val file = getModelFile(model.id)
+            if (file.exists()) {
+                model.copy(path = file.absolutePath, isDownloaded = true, status = LocalModelStatus.NotLoaded)
+            } else {
+                model.copy(isDownloaded = false, status = LocalModelStatus.NotLoaded)
+            }
+        }
+        _models.value = updatedModels
+    }
+
+    private fun getModelFile(modelId: String): File {
+        val dir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS)
+        return File(dir, "$modelId.bin")
+    }
+
+    fun downloadModel(modelId: String) {
+        val model = _models.value.find { it.id == modelId } ?: return
+        if (model.isDownloaded) return
+
+        val downloadId = downloader.downloadModel(model)
         
+        scope.launch {
+            downloader.observeDownloadProgress(downloadId).collect { progress ->
+                _models.value = _models.value.map { 
+                    if (it.id == modelId) it.copy(status = LocalModelStatus.Downloading, downloadProgress = progress) else it 
+                }
+                if (progress >= 1f) {
+                    refreshModelStatus()
+                }
+            }
+        }
+    }
+
+    fun registerModel(descriptor: LocalModelDescriptor) {
+        _models.value = _models.value + descriptor
+    }
+
+    suspend fun loadModel(id: String): Result<Unit> {
+        val descriptor = _models.value.find { it.id == id } 
+            ?: return Result.failure(Exception("Model not found"))
+        
+        if (!descriptor.isDownloaded) {
+            return Result.failure(Exception("Model not downloaded"))
+        }
+
+        _activeModelId.value = id
         _models.value = _models.value.map { 
             if (it.id == id) it.copy(status = LocalModelStatus.Loading) else it 
         }
 
-        val result = engine.load(model)
+        val result = engine.load(descriptor)
         
-        _models.value = _models.value.map { 
-            if (it.id == id) {
-                it.copy(status = if (result.isSuccess) LocalModelStatus.Ready else LocalModelStatus.Error)
-            } else {
-                it.copy(status = LocalModelStatus.NotLoaded) // Ensure others are unloaded
-            }
-        }
-
         if (result.isSuccess) {
-            _activeModelId.value = id
+            _models.value = _models.value.map { 
+                if (it.id == id) it.copy(status = LocalModelStatus.Ready) else it 
+            }
+        } else {
+            _models.value = _models.value.map { 
+                if (it.id == id) it.copy(status = LocalModelStatus.Error) else it 
+            }
+            _activeModelId.value = null
         }
+        
+        return result
     }
 
     suspend fun unloadActiveModel() {
         engine.unload()
+        val currentId = _activeModelId.value
+        _models.value = _models.value.map { 
+            if (it.id == currentId) it.copy(status = LocalModelStatus.NotLoaded) else it 
+        }
         _activeModelId.value = null
-        _models.value = _models.value.map { it.copy(status = LocalModelStatus.NotLoaded) }
+    }
+
+    fun deleteModel(modelId: String) {
+        val file = getModelFile(modelId)
+        if (file.exists()) {
+            file.delete()
+        }
+        refreshModelStatus()
     }
 }

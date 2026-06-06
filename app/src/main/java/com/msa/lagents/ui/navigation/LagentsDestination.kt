@@ -2,6 +2,7 @@ package com.msa.lagents.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.LibraryBooks
@@ -27,14 +28,14 @@ sealed class LagentsDestination(
     object Chat : LagentsDestination(
         route = "chat",
         label = "Chat",
-        icon = Icons.Outlined.Chat,
+        icon = Icons.AutoMirrored.Outlined.Chat,
         summary = "Talk to your agents"
     )
 
     object Library : LagentsDestination(
         route = "library",
         label = "Library",
-        icon = Icons.Outlined.LibraryBooks,
+        icon = Icons.AutoMirrored.Outlined.LibraryBooks,
         summary = "Manage agents and skills"
     )
 
@@ -74,7 +75,7 @@ sealed class LagentsDestination(
     )
 }
 
-val topLevelDestinations = listOf(
+val LagentsTopLevelDestinations = listOf(
     LagentsDestination.Chat,
     LagentsDestination.Library,
     LagentsDestination.Workflows,

@@ -119,6 +119,8 @@ fun LagentsApp(
             onRegisterMockModel = modelsViewModel::registerMockLocalModel,
             onLoadLocalModel = modelsViewModel::loadLocalModel,
             onUnloadLocalModel = modelsViewModel::unloadLocalModel,
+            onDownloadLocalModel = modelsViewModel::downloadLocalModel,
+            onDeleteLocalModel = modelsViewModel::deleteLocalModel,
             onAddProvider = modelsViewModel::addProvider,
             onDeleteProvider = modelsViewModel::deleteProvider,
             onCreateKnowledgeCollection = knowledgeViewModel::createCollection,

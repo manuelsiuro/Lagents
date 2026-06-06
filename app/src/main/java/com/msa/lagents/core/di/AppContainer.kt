@@ -8,6 +8,7 @@ import com.msa.lagents.domain.knowledge.FakeEmbeddingEngine
 import com.msa.lagents.domain.knowledge.TextChunker
 import com.msa.lagents.data.local.LagentsDatabase
 import com.msa.lagents.data.local.engine.MediaPipeModelEngine
+import com.msa.lagents.data.local.manager.LocalModelDownloader
 import com.msa.lagents.data.local.manager.LocalModelManager
 import com.msa.lagents.data.provider.ApiKeyStorage
 import com.msa.lagents.data.provider.ChatModelClientFactory
@@ -69,7 +70,13 @@ class AppContainer(context: Context) {
 
     val localModelEngine: MediaPipeModelEngine = MediaPipeModelEngine(context = applicationContext)
     
-    val localModelManager: LocalModelManager = LocalModelManager(engine = localModelEngine)
+    val localModelDownloader: LocalModelDownloader = LocalModelDownloader(context = applicationContext)
+
+    val localModelManager: LocalModelManager = LocalModelManager(
+        context = applicationContext,
+        engine = localModelEngine,
+        downloader = localModelDownloader
+    )
 
     val toolRegistry: ToolRegistry = ToolRegistry()
 

@@ -13,7 +13,10 @@ data class LocalModelDescriptor(
     val displayName: String,
     val sizeBytes: Long,
     val contextWindowTokens: Int?,
-    val status: LocalModelStatus = LocalModelStatus.NotLoaded
+    val status: LocalModelStatus = LocalModelStatus.NotLoaded,
+    val downloadUrl: String? = null,
+    val downloadProgress: Float? = null,
+    val isDownloaded: Boolean = false
 )
 
 enum class LocalModelEngineType {
@@ -23,6 +26,7 @@ enum class LocalModelEngineType {
 
 enum class LocalModelStatus {
     NotLoaded,
+    Downloading,
     Loading,
     Ready,
     Error
