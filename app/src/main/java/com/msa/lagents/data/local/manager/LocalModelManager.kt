@@ -50,13 +50,21 @@ class LocalModelManager(
         refreshModelStatus()
     }
 
-    private fun refreshModelStatus() {
+    fun refreshModelStatus() {
         val updatedModels = _models.value.map { model ->
             val file = getModelFile(model.id)
-            if (file.exists()) {
-                model.copy(path = file.absolutePath, isDownloaded = true, status = LocalModelStatus.NotLoaded)
+            if (file.exists() && file.length() > 0) {
+                model.copy(
+                    path = file.absolutePath, 
+                    isDownloaded = true, 
+                    status = if (model.id == _activeModelId.value) LocalModelStatus.Ready else LocalModelStatus.NotLoaded
+                )
             } else {
-                model.copy(isDownloaded = false, status = LocalModelStatus.NotLoaded)
+                model.copy(
+                    isDownloaded = false, 
+                    status = LocalModelStatus.NotLoaded,
+                    downloadProgress = null
+                )
             }
         }
         _models.value = updatedModels
@@ -69,24 +77,39 @@ class LocalModelManager(
 
     fun downloadModel(modelId: String) {
         val model = _models.value.find { it.id == modelId } ?: return
-        if (model.isDownloaded) return
+        if (model.isDownloaded || model.status == LocalModelStatus.Downloading) return
 
         val downloadId = downloader.downloadModel(model)
         
         scope.launch {
-            downloader.observeDownloadProgress(downloadId).collect { progress ->
-                _models.value = _models.value.map { 
-                    if (it.id == modelId) it.copy(status = LocalModelStatus.Downloading, downloadProgress = progress) else it 
-                }
-                if (progress >= 1f) {
+            downloader.observeDownloadProgress(downloadId)
+                .onCompletion {
                     refreshModelStatus()
                 }
-            }
+                .collect { progress ->
+                    _models.update { currentList ->
+                        currentList.map { 
+                            if (it.id == modelId) {
+                                it.copy(
+                                    status = if (progress >= 1f) LocalModelStatus.NotLoaded else LocalModelStatus.Downloading,
+                                    downloadProgress = progress
+                                )
+                            } else it 
+                        }
+                    }
+                }
         }
     }
 
     fun registerModel(descriptor: LocalModelDescriptor) {
-        _models.value = _models.value + descriptor
+        _models.update { currentList ->
+            if (currentList.any { it.id == descriptor.id }) {
+                currentList.map { if (it.id == descriptor.id) descriptor else it }
+            } else {
+                currentList + descriptor
+            }
+        }
+        refreshModelStatus()
     }
 
     suspend fun loadModel(id: String): Result<Unit> {
@@ -98,19 +121,25 @@ class LocalModelManager(
         }
 
         _activeModelId.value = id
-        _models.value = _models.value.map { 
-            if (it.id == id) it.copy(status = LocalModelStatus.Loading) else it 
+        _models.update { currentList ->
+            currentList.map { 
+                if (it.id == id) it.copy(status = LocalModelStatus.Loading) else it 
+            }
         }
 
         val result = engine.load(descriptor)
         
         if (result.isSuccess) {
-            _models.value = _models.value.map { 
-                if (it.id == id) it.copy(status = LocalModelStatus.Ready) else it 
+            _models.update { currentList ->
+                currentList.map { 
+                    if (it.id == id) it.copy(status = LocalModelStatus.Ready) else it 
+                }
             }
         } else {
-            _models.value = _models.value.map { 
-                if (it.id == id) it.copy(status = LocalModelStatus.Error) else it 
+            _models.update { currentList ->
+                currentList.map { 
+                    if (it.id == id) it.copy(status = LocalModelStatus.Error) else it 
+                }
             }
             _activeModelId.value = null
         }
@@ -121,17 +150,24 @@ class LocalModelManager(
     suspend fun unloadActiveModel() {
         engine.unload()
         val currentId = _activeModelId.value
-        _models.value = _models.value.map { 
-            if (it.id == currentId) it.copy(status = LocalModelStatus.NotLoaded) else it 
-        }
         _activeModelId.value = null
+        _models.update { currentList ->
+            currentList.map { 
+                if (it.id == currentId) it.copy(status = LocalModelStatus.NotLoaded) else it 
+            }
+        }
     }
 
     fun deleteModel(modelId: String) {
-        val file = getModelFile(modelId)
-        if (file.exists()) {
-            file.delete()
+        scope.launch {
+            if (_activeModelId.value == modelId) {
+                unloadActiveModel()
+            }
+            val file = getModelFile(modelId)
+            if (file.exists()) {
+                file.delete()
+            }
+            refreshModelStatus()
         }
-        refreshModelStatus()
     }
 }

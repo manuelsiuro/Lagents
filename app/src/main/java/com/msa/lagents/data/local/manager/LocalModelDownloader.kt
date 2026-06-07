@@ -31,42 +31,58 @@ class LocalModelDownloader(private val context: Context) {
         while (isDownloading) {
             val query = DownloadManager.Query().setFilterById(downloadId)
             val cursor = downloadManager.query(query)
-            if (cursor.moveToFirst()) {
-                val bytesDownloaded = cursor.getInt(cursor.getColumnIndexAt(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-                val bytesTotal = cursor.getInt(cursor.getColumnIndexAt(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+            if (cursor != null && cursor.moveToFirst()) {
+                val statusIdx = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
+                val status = if (statusIdx != -1) cursor.getInt(statusIdx) else -1
                 
-                if (cursor.getInt(cursor.getColumnIndexAt(DownloadManager.COLUMN_STATUS)) == DownloadManager.STATUS_SUCCESSFUL) {
-                    isDownloading = false
-                    emit(1f)
-                } else {
-                    if (bytesTotal > 0) {
-                        emit(bytesDownloaded.toFloat() / bytesTotal)
+                val downloadedIdx = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+                val bytesDownloaded = if (downloadedIdx != -1) cursor.getLong(downloadedIdx) else 0L
+                
+                val totalIdx = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+                val bytesTotal = if (totalIdx != -1) cursor.getLong(totalIdx) else 0L
+
+                when (status) {
+                    DownloadManager.STATUS_SUCCESSFUL -> {
+                        isDownloading = false
+                        emit(1f)
+                    }
+                    DownloadManager.STATUS_FAILED -> {
+                        isDownloading = false
+                        // We could throw but let's just finish the flow and let manager refresh
+                    }
+                    DownloadManager.STATUS_RUNNING, DownloadManager.STATUS_PENDING -> {
+                        if (bytesTotal > 0) {
+                            emit(bytesDownloaded.toFloat() / bytesTotal)
+                        } else {
+                            emit(0f)
+                        }
                     }
                 }
+            } else {
+                isDownloading = false
             }
-            cursor.close()
+            cursor?.close()
             if (isDownloading) {
                 delay(1000)
             }
         }
     }
 
-    private fun Cursor.getColumnIndexAt(columnName: String): Int {
-        return getColumnIndex(columnName)
-    }
-
     fun getDownloadedFile(downloadId: Long): File? {
         val query = DownloadManager.Query().setFilterById(downloadId)
         val cursor = downloadManager.query(query)
-        if (cursor.moveToFirst()) {
-            val status = cursor.getInt(cursor.getColumnIndexAt(DownloadManager.COLUMN_STATUS))
+        if (cursor != null && cursor.moveToFirst()) {
+            val statusIdx = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
+            val status = if (statusIdx != -1) cursor.getInt(statusIdx) else -1
+            
             if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                val uriString = cursor.getString(cursor.getColumnIndexAt(DownloadManager.COLUMN_LOCAL_URI))
+                val uriIdx = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
+                val uriString = if (uriIdx != -1) cursor.getString(uriIdx) else null
                 cursor.close()
-                return File(Uri.parse(uriString).path!!)
+                return uriString?.let { File(Uri.parse(it).path!!) }
             }
         }
-        cursor.close()
+        cursor?.close()
         return null
     }
 }

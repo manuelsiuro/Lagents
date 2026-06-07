@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -190,7 +191,7 @@ fun DestinationScreen(
         )
         LagentsDestination.Models -> ModelsFoundationScreen(
             state = modelsState,
-            onRegisterMockLocal = onRegisterMockModel,
+            onRefreshList = onRegisterMockModel,
             onLoadLocal = onLoadLocalModel,
             onUnloadLocal = onUnloadLocalModel,
             onDownloadLocal = onDownloadLocalModel,
@@ -612,7 +613,7 @@ private fun KnowledgeFoundationScreen(
 @Composable
 private fun ModelsFoundationScreen(
     state: ModelsUiState,
-    onRegisterMockLocal: () -> Unit,
+    onRefreshList: () -> Unit,
     onLoadLocal: (String) -> Unit,
     onUnloadLocal: () -> Unit,
     onDownloadLocal: (String) -> Unit,
@@ -668,7 +669,7 @@ private fun ModelsFoundationScreen(
                 title = "Local Model Store",
                 body = "On-device LLMs for private, offline inference.",
                 actionLabel = "Refresh List",
-                onAction = onRegisterMockLocal,
+                onAction = onRefreshList,
                 isEmpty = state.localModels.isEmpty(),
                 emptyTitle = "No local models",
             ) {
@@ -691,6 +692,9 @@ private fun ModelsFoundationScreen(
                                     isActive -> {
                                         Button(onClick = onUnloadLocal) { Text("Unload") }
                                     }
+                                    model.status == LocalModelStatus.Loading -> {
+                                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                    }
                                     model.status == LocalModelStatus.Ready -> {
                                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                             IconButton(onClick = { onDeleteLocal(model.id) }) {
@@ -701,7 +705,7 @@ private fun ModelsFoundationScreen(
                                     }
                                     model.status == LocalModelStatus.Downloading -> {
                                         CircularProgressIndicator(
-                                            progress = { model.downloadProgress ?: 0f },
+                                            progress = model.downloadProgress ?: 0f,
                                             modifier = Modifier.size(24.dp)
                                         )
                                     }
@@ -715,9 +719,13 @@ private fun ModelsFoundationScreen(
                             
                             if (model.status == LocalModelStatus.Downloading) {
                                 LinearProgressIndicator(
-                                    progress = { model.downloadProgress ?: 0f },
+                                    progress = model.downloadProgress ?: 0f,
                                     modifier = Modifier.fillMaxWidth()
                                 )
+                            }
+                            
+                            if (model.status == LocalModelStatus.Error) {
+                                Text("Error loading model", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     }

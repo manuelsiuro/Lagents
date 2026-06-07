@@ -358,7 +358,7 @@ private fun WorkflowProgressCard(
             val p = progress.progress
             if (p != null) {
                 LinearProgressIndicator(
-                    progress = { p },
+                    progress = p,
                     modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small)
                 )
             } else {

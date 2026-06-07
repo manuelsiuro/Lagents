@@ -53,19 +53,13 @@ class ModelsViewModel(
         }
     }
 
+    fun refreshLocalModels() {
+        localModelManager.refreshModelStatus()
+    }
+
     fun registerMockLocalModel() {
-        viewModelScope.launch {
-            localModelManager.registerModel(
-                LocalModelDescriptor(
-                    id = "gemma-2b",
-                    path = "/sdcard/Download/gemma-2b-it-gpu-int4.bin",
-                    engine = LocalModelEngineType.MediaPipe,
-                    displayName = "Gemma 2B (IT)",
-                    sizeBytes = 1_500_000_000,
-                    contextWindowTokens = 2048
-                )
-            )
-        }
+        // Kept for backward compatibility with UI button for now, but just refreshes
+        refreshLocalModels()
     }
 
     fun loadLocalModel(id: String) {
